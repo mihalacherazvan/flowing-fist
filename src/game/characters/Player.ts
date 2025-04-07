@@ -1,5 +1,6 @@
 import {
     Vector3,
+    Vector2,
     TransformNode,
     ArcRotateCamera,
     Ray,
@@ -62,21 +63,24 @@ export class Player {
         this.camera = new ArcRotateCamera(
             'playerCamera',
             Math.PI, // Alpha (rotation around Y axis)
-            Math.PI / 3, // Beta (rotation around X axis)
-            8, // Radius (distance from target)
+            Math.PI / 2.5, // Beta (rotation around X axis)
+            5, // Radius (distance from target)
             this.rootNode.position, // Target
             this.scene
         );
 
         // Configure camera
         this.camera.lowerRadiusLimit = 5;
-        this.camera.upperRadiusLimit = 8;
+        this.camera.upperRadiusLimit = 7;
         this.camera.wheelDeltaPercentage = 0.01;
         this.camera.attachControl(this.scene.getEngine().getRenderingCanvas(), true);
         
         // Add beta (vertical) angle limits
         this.camera.lowerBetaLimit = Math.PI / 6;     // Limit looking down (higher value = less down)
         this.camera.upperBetaLimit = Math.PI / 2.2;   // Limit looking up (lower value = less up)
+        
+        // Add camera target offset to position it more over the right shoulder
+        this.camera.targetScreenOffset = new Vector2(1, -1); // Offset right and up
 
         // Set camera as active
         this.scene.activeCamera = this.camera;
