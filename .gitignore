@@ -1,0 +1,54 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.nuxt/
+.cache/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Editor directories and files
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Babylon.js specific
+.babylon/
+
+# OS specific
+Thumbs.db
+desktop.ini
+
+# Package lock files (optional, depending on your workflow)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+
+# Generated files
+public/models/*
+!public/models/.gitkeep
