@@ -21,8 +21,8 @@ import { InputController } from '../utils/InputController';
 import '@babylonjs/loaders/glTF';
 
 type AnimationNames = "idle"
-    | "run"
-    | "run-backwards"
+    | "run-forward"
+    | "run-backward"
     | "left-strafe"
     | "right-strafe";
 
@@ -39,6 +39,7 @@ export class Player {
     private dashTimer: number = 0;
     private dashCooldownTimer: number = 0;
     private isDashing: boolean = false;
+    private isRunning: boolean = false;
     private cameraRotationSpeed: number = 0.005;
     private gravity: number = 0.01;
     private verticalVelocity: number = 0;
@@ -46,6 +47,7 @@ export class Player {
     private rayHelper?: RayHelperType;
     private debugMode: boolean = false;
     private modelLoaded: boolean = false;
+    private mesh: AbstractMesh | null = null;
     private meshes: Map<AnimationNames, AbstractMesh> = new Map();
     private animations: Map<AnimationNames, AnimationGroup> = new Map();
     private currentAnimationName?: AnimationNames;
@@ -86,7 +88,8 @@ export class Player {
         this.scene.activeCamera = this.camera;
 
         // Load the character model
-        this.loadCharacterAnimations();
+        this.loadCharacterModel();
+        //this.loadCharacterAnimations();
 
         // Setup ground detection ray
         if (this.debugMode) {
@@ -96,61 +99,52 @@ export class Player {
         }
     }
 
-    private async loadCharacterAnimations(): Promise<void> {
+    private async loadCharacterModel(): Promise<void> {
         try {
-            await this.loadAnimation("idle", "models/y-bot/animations/fighting-idle.glb");
-            await this.loadAnimation("run", "models/y-bot/animations/running-forwards.glb");
-            await this.loadAnimation("run-backwards", "models/y-bot/animations/running-backwards.glb");
-            await this.loadAnimation("left-strafe", "models/y-bot/animations/left-strafe.glb");
-            await this.loadAnimation("right-strafe", "models/y-bot/animations/right-strafe.glb");
+            const importResult = await ImportMeshAsync(
+                "models/y-bot/y-bot-with-animations.glb",
+                this.scene
+            );
 
-            // Mark as loaded
+            console.log(importResult);
+
+            // Get the root mesh
+            const importedMesh = importResult.meshes[0];
+
+            // Scale and position the model
+            importedMesh.scaling = new Vector3(1.5, 1.5, 1.5); // Slightly larger scale
+
+            // Adjust position to align feet with ground
+            importedMesh.position = new Vector3(0, -0.9, 0);
+
+            // Rotate the model to face forward
+            importedMesh.rotation = new Vector3(0, Math.PI / 2, 0);
+
+            // Parent the model to our root node
+            importedMesh.parent = this.rootNode;
+
+            this.mesh = importedMesh;
+
+            if (importResult.animationGroups && importResult.animationGroups.length > 0) {
+                // Stop all animations initially
+                importResult.animationGroups.forEach((animGroup, index) => {
+                    if (index === 0) {
+                        return;
+                    }
+
+                    animGroup.stop();
+                    
+                    // Store the idle animation
+                    this.animations.set(animGroup.name as AnimationNames, animGroup);
+                    this.meshes.set(animGroup.name as AnimationNames, importResult.meshes[index]);
+                });
+            }
+
             this.modelLoaded = true;
 
-            console.log("Character model and animations loaded successfully");
-        } catch (error) {
-            console.error("Failed to load character model:", error);
-        }
-    }
-
-    private async loadAnimation(name: AnimationNames, fromFile: string): Promise<void> {
-        // Load the idle animation model first
-        const importResult = await ImportMeshAsync(fromFile, this.scene);
-
-        // Get the root mesh
-        const importedMesh = importResult.meshes[0];
-
-        // Scale and position the model
-        importedMesh.scaling = new Vector3(1.5, 1.5, 1.5); // Slightly larger scale
-
-        // Adjust position to align feet with ground
-        importedMesh.position = new Vector3(0, -0.9, 0);
-
-        // Rotate the model to face forward
-        importedMesh.rotation = new Vector3(0, Math.PI / 2, 0);
-
-        // Parent the model to our root node
-        importedMesh.parent = this.rootNode;
-
-        // Hide mesh
-        importedMesh.setEnabled(false);
-
-        // Enable shadows for all meshes
-        importResult.meshes.forEach(mesh => {
-            mesh.receiveShadows = true;
-            mesh.checkCollisions = true;
-        });
-
-        this.meshes.set(name, importedMesh);
-
-        if (importResult.animationGroups && importResult.animationGroups.length > 0) {
-            // Stop all animations initially
-            importResult.animationGroups.forEach(animGroup => {
-                animGroup.stop();
-            });
-
-            // Store the idle animation
-            this.animations.set(name, importResult.animationGroups[0]);
+            console.log(this.animations);
+        } catch (e) {
+            console.error(e);
         }
     }
 
@@ -170,12 +164,13 @@ export class Player {
     private handleMovement(): void {
         // Get movement direction from input
         const [inputX, inputZ] = this.input.getMovementDirection();
+        this.isRunning = this.input.isRunning();
 
         // Track if we're moving
         const isMoving = inputX !== 0 || inputZ !== 0;
 
         // Update animations based on movement state
-        this.updateAnimations(isMoving, this.input.isRunning());
+        this.updateAnimations(isMoving);
 
         // Skip if no movement input
         if (!isMoving) return;
@@ -235,7 +230,7 @@ export class Player {
     /**
      * Update character animations based on movement state
      */
-    private updateAnimations(isMoving: boolean, isRunning: boolean): void {
+    private updateAnimations(isMoving: boolean): void {
         // Only update animations if the model is loaded
         if (!this.modelLoaded) return;
 
@@ -244,67 +239,26 @@ export class Player {
 
         if (!isMoving) {
             this.playAnimation("idle");
-
             return;
         }
 
         if (inputX < 0 && !inputZ) {
-            this.playAnimation("run");
-
+            this.playAnimation("run-forward");
             return;
         }
 
         if (inputX > 0) {
-            this.playAnimation("run-backwards");
-
-            if (inputZ > 0) {
-                this.meshes.get("run-backwards")!.rotation.y = Math.PI / 4;
-            }
-
-            if (inputZ < 0) {
-                this.meshes.get("run-backwards")!.rotation.y = 3 * Math.PI / 4;
-            }
-
-            if (inputZ === 0) {
-                this.meshes.get("run-backwards")!.rotation.y = Math.PI / 2;
-            }
-
+            this.playAnimation("run-backward");
             return;
         }
 
         if (inputZ > 0) {
             this.playAnimation("left-strafe");
-
-            if (inputX > 0) {
-                this.meshes.get("left-strafe")!.rotation.y = 3 * Math.PI / 4;
-            }
-
-            if (inputX < 0) {
-                this.meshes.get("left-strafe")!.rotation.y = Math.PI / 4;
-            }
-
-            if (inputX === 0) {
-                this.meshes.get("left-strafe")!.rotation.y = Math.PI / 2;
-            }
-
             return;
         }
 
         if (inputZ < 0) {
             this.playAnimation("right-strafe");
-
-            if (inputX > 0) {
-                this.meshes.get("right-strafe")!.rotation.y = Math.PI / 4;
-            }
-
-            if (inputX < 0) {
-                this.meshes.get("right-strafe")!.rotation.y = 3 * Math.PI / 4;
-            }
-
-            if (inputX === 0) {
-                this.meshes.get("right-strafe")!.rotation.y = Math.PI / 2;
-            }
-
             return;
         }
 
@@ -314,7 +268,15 @@ export class Player {
     /**
      * Play the specified animation, stopping any currently playing animation
      */
-    private playAnimation(animationName?: AnimationNames): void {
+    private playAnimation(animationName: AnimationNames): void {
+        if (this.currentAnimation) {
+            if (this.isRunning) {
+                this.currentAnimation.speedRatio = 1.5;
+            } else {
+                this.currentAnimation.speedRatio = 1;
+            }
+        }
+
         if (!animationName
             || !this.animations.has(animationName)
             || animationName === this.currentAnimationName
@@ -322,12 +284,11 @@ export class Player {
             return;
         }
 
-        if (this.currentAnimationName) {
-            this.meshes.get(this.currentAnimationName)?.setEnabled(false);
-            this.currentAnimation?.stop();
-        }
+        console.log(`Playing animation: ${animationName}`);
 
-        this.meshes.get(animationName)?.setEnabled(true);
+        if (this.currentAnimationName && this.currentAnimation) {
+            this.currentAnimation.stop();
+        }
 
         this.currentAnimation = this.animations.get(animationName);
         this.currentAnimationName = animationName;
@@ -341,10 +302,46 @@ export class Player {
      * Update player rotation to face the direction of movement or camera
      */
     private updatePlayerRotation(): void {
-        // If there's no movement, make the player face the camera direction
+        // Get movement direction
         const [inputX, inputZ] = this.input.getMovementDirection();
-
+        
+        // If there's movement, calculate the appropriate mesh rotation based on input direction
         if (inputX !== 0 || inputZ !== 0) {
+            // Get the current animation mesh
+            if (this.mesh) {
+                if (inputX < 0 && !inputZ) {
+                    // Moving forward only
+                    this.mesh.rotation.y = Math.PI / 2;
+                } else if (inputX > 0) {
+                    // Moving backward (possibly with left/right)
+                    if (inputZ > 0) {
+                        this.mesh.rotation.y = Math.PI / 4;
+                    } else if (inputZ < 0) {
+                        this.mesh.rotation.y = 3 * Math.PI / 4;
+                    } else {
+                        this.mesh.rotation.y = Math.PI / 2;
+                    }
+                } else if (inputZ > 0) {
+                    // Moving left (possibly with forward/backward)
+                    if (inputX > 0) {
+                        this.mesh.rotation.y = 3 * Math.PI / 4;
+                    } else if (inputX < 0) {
+                        this.mesh.rotation.y = Math.PI / 4;
+                    } else {
+                        this.mesh.rotation.y = Math.PI / 2;
+                    }
+                } else if (inputZ < 0) {
+                    // Moving right (possibly with forward/backward)
+                    if (inputX > 0) {
+                        this.mesh.rotation.y = Math.PI / 4;
+                    } else if (inputX < 0) {
+                        this.mesh.rotation.y = 3 * Math.PI / 4;
+                    } else {
+                        this.mesh.rotation.y = Math.PI / 2;
+                    }
+                }
+            }
+            
             // Get the camera's forward vector (horizontal only)
             const cameraForward = this.getCameraForwardVector();
             cameraForward.y = 0; // Ignore vertical component
@@ -353,7 +350,7 @@ export class Player {
             // Calculate the target rotation based on camera direction
             const targetAngle = Math.atan2(cameraForward.x, cameraForward.z);
 
-            // Set the player's rotation to match the camera direction
+            // Set the player's root node rotation to match the camera direction
             this.rootNode.rotation.y = targetAngle;
         }
     }
@@ -429,8 +426,8 @@ export class Player {
 
     private createGroundRay(): Ray {
         const origin = this.rootNode.position.clone();
-        origin.y -= 0.5;
-        const ray = new Ray(origin, Vector3.Down(), 0.6);
+        origin.y = 0;
+        const ray = new Ray(origin, Vector3.Down(), 1.6);
         return ray;
     }
 

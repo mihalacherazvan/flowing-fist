@@ -69,30 +69,18 @@ export class InputController {
         this.isPointerLocked = document.pointerLockElement === this.canvas;
     }
 
-    /**
-     * Check if a key is currently pressed
-     */
     public isKeyDown(key: string): boolean {
         return this.keys[key.toLowerCase()] === true;
     }
 
-    /**
-     * Check if multiple keys are pressed simultaneously
-     */
     public areKeysDown(keys: string[]): boolean {
         return keys.every(key => this.isKeyDown(key));
     }
 
-    /**
-     * Get the current mouse X position
-     */
     public getMouseX(): number {
         return this.mouseX;
     }
 
-    /**
-     * Get the current mouse Y position
-     */
     public getMouseY(): number {
         return this.mouseY;
     }
@@ -115,16 +103,10 @@ export class InputController {
         return delta;
     }
 
-    /**
-     * Check if the player is running (Shift key)
-     */
     public isRunning(): boolean {
         return this.isKeyDown('shift') || this.isKeyDown('shiftleft') || this.isKeyDown('shiftright');
     }
 
-    /**
-     * Check if the player is attempting to dash (Space + direction key)
-     */
     public isDashing(): boolean {
         return this.isKeyDown('space') && (
             this.isKeyDown('w')
