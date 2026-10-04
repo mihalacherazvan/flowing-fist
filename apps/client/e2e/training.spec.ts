@@ -28,7 +28,7 @@ test('training mode: move, dodge and lock on', async ({ page }, testInfo) => {
     // Both character models bring their own animation groups
     await page.waitForFunction(() => {
         const game = (window as unknown as { flowingFist?: GameHandle }).flowingFist;
-        return game !== undefined && game.getScene().animationGroups.length >= 12;
+        return game !== undefined && game.getScene().animationGroups.length >= 10;
     });
     // The canvas is deliberately not clicked: that would lock the pointer and let stray
     // mouse events turn the camera
@@ -76,7 +76,7 @@ test('training mode: hit the dummy, then have it block', async ({ page }) => {
     await page.goto('/');
     await page.waitForFunction(() => {
         const game = (window as unknown as { flowingFist?: GameHandle }).flowingFist;
-        return game !== undefined && game.getScene().animationGroups.length >= 12;
+        return game !== undefined && game.getScene().animationGroups.length >= 10;
     });
 
     // Lock on and wait for the camera to swing round, so that forward means towards the dummy

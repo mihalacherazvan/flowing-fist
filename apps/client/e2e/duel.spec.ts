@@ -18,7 +18,7 @@ async function openGame(browser: Browser, query: string, errors: string[]): Prom
     await page.goto(`/${query}`);
     await page.waitForFunction(() => {
         const game = (window as unknown as { flowingFist?: GameHandle }).flowingFist;
-        return game !== undefined && game.getScene().animationGroups.length >= 12;
+        return game !== undefined && game.getScene().animationGroups.length >= 10;
     });
 
     return page;

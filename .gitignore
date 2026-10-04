@@ -49,6 +49,9 @@ desktop.ini
 # yarn.lock
 # pnpm-lock.yaml
 
+# Mixamo downloads, which may not be redistributed (see docs/ASSETS.md)
+assets-src/
+
 # Generated files
 apps/client/public/models/*
 !apps/client/public/models/.gitkeep

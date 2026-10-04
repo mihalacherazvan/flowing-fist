@@ -17,6 +17,7 @@ Combat numbers are placeholders and there are no attack animations yet. An attac
 | [docs/SPEC.md](docs/SPEC.md) | The plan: scope, tech stack, combat and netcode design, milestones |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | What each package and file does today, with its current limits |
 | [docs/GAMEPLAY.md](docs/GAMEPLAY.md) | Controls, combat rules, the move list and the default deck |
+| [docs/ASSETS.md](docs/ASSETS.md) | Getting a character and its animations from Mixamo into the game |
 
 ## Getting started
 
@@ -35,34 +36,9 @@ Training mode needs only the client. Everything else needs the server and the da
 
 ### Character model
 
-The model files are not in the repository. Before the game can load, put the Mixamo Y-bot export at:
+The model files are not in the repository. The game loads `apps/client/public/models/y-bot/y-bot-with-animations.glb`, which `pnpm assets` builds from Mixamo downloads placed in `assets-src/`. It needs Blender 4.4 or later.
 
-```
-apps/client/public/models/y-bot/y-bot-with-animations.glb
-```
-
-#### Mixamo vendor
-
-The character and its animations come from [Mixamo](https://www.mixamo.com) (free, needs an Adobe account). Mixamo exports FBX, so the files go through Blender to become GLB.
-
-1. In Mixamo, open **Characters** and pick **Y Bot**.
-2. Download the character on its own: **Download**, format **FBX Binary (.fbx)**, pose **T-pose**.
-3. Open **Animations** and, for each clip below, tick **In Place** where the option is offered (the simulation moves the character, not the animation), then **Download** with format **FBX Binary (.fbx)**, skin **With Skin**, 30 frames per second.
-
-   | Mixamo animation | Name the game expects |
-   |---|---|
-   | Fighting Idle | `idle` |
-   | Running | `run-forward` |
-   | Running Backward | `run-backward` |
-   | Left Strafe | `left-strafe` |
-   | Right Strafe | `right-strafe` |
-
-4. In Blender, import the T-pose FBX, then each animation FBX. Rename each imported action to the name in the table and assign them all to the T-pose armature (one NLA track per action). Delete the extra armatures and meshes the animation files brought in.
-5. Export with **File → Export → glTF 2.0**, format **glTF Binary (.glb)**, animations included, to `apps/client/public/models/y-bot/y-bot-with-animations.glb`.
-
-The game looks animations up by those exact names, so a clip with a different name is silently never played.
-
-Optionally, also export each animation on its own to `apps/client/public/models/y-bot/animations/<name>.glb`.  of any clips in `apps/client/public/models/<character>/animations/` to a `clips/` folder next to them.
+[docs/ASSETS.md](docs/ASSETS.md) has the whole workflow: what to download from Mixamo and with which settings, where to put it, and how to add a new animation.
 
 ### Configuration
 
@@ -89,7 +65,7 @@ The server's settings can go in `apps/server/.env`; see `apps/server/.env.exampl
 | `pnpm lint` | ESLint |
 | `pnpm typecheck` | TypeScript checks across all packages |
 | `pnpm build` | Production build of the client |
-| `pnpm assets` | Regenerates animation-only clips from the model files |
+| `pnpm assets` | Builds the character model from the Mixamo downloads in `assets-src/`; needs Blender |
 
 The browser tests need Chromium once: `pnpm exec playwright install chromium` in `apps/client`.
 
@@ -103,7 +79,8 @@ packages/content   moves, decks, arenas (data and rules)
 packages/netcode   server authority and client prediction
 packages/protocol  network message definitions
 tools/assets       asset preparation scripts
-docs/              spec, architecture and gameplay
+assets-src/        Mixamo downloads the model is built from (not in git)
+docs/              spec, architecture, gameplay and assets
 ```
 
 `sim`, `content`, `netcode` and `protocol` contain no Babylon.js or Colyseus code, so they run and are tested in plain Node. See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for how they fit together.

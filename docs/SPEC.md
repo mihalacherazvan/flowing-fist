@@ -2,7 +2,7 @@
 
 ## Status
 
-_As of 2026-10-04:_ milestones **M0–M4 are done**; **M5 is next**. This document is the plan. What actually exists is described in [ARCHITECTURE.md](ARCHITECTURE.md), and how the game plays in [GAMEPLAY.md](GAMEPLAY.md).
+_As of 2026-10-04:_ milestones **M0–M4 are done**; **M5 is next**. This document is the plan. What actually exists is described in [ARCHITECTURE.md](ARCHITECTURE.md), how the game plays in [GAMEPLAY.md](GAMEPLAY.md), and how models and animations are made in [ASSETS.md](ASSETS.md).
 
 ## Context
 

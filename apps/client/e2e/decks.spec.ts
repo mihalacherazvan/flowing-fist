@@ -13,7 +13,7 @@ const BACK_RIGHT = 2;
 async function waitForGame(page: Page): Promise<void> {
     await page.waitForFunction(() => {
         const game = (window as unknown as { flowingFist?: GameHandle }).flowingFist;
-        return game !== undefined && game.getScene().animationGroups.length >= 12;
+        return game !== undefined && game.getScene().animationGroups.length >= 10;
     });
 }
 

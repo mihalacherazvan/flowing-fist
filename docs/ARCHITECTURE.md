@@ -17,7 +17,7 @@ packages/sim     the fight simulation
 packages/content moves, decks, arenas (data and rules)
 packages/netcode server authority and client prediction
 packages/protocol network message definitions
-tools/assets     asset preparation scripts
+tools/assets     builds the character model from Mixamo downloads
 ```
 
 Dependencies only point downwards in this list:
@@ -45,7 +45,7 @@ client ──┐                ┌── server
 | `pnpm test` | Unit tests (sim, content, netcode) and server tests; the server tests need the database |
 | `pnpm test:e2e` | Browser tests; starts its own client and server |
 | `pnpm lint` / `pnpm typecheck` / `pnpm build` | Checks and production client build |
-| `pnpm assets` | Regenerates animation-only clips from the model files |
+| `pnpm assets` | Builds the character model from the Mixamo downloads in `assets-src/`; needs Blender |
 | `pnpm --filter @flowing-fist/server db:generate` | Writes a migration for changes made to `db/schema.ts` |
 
 Training mode needs only the client. Online duels, accounts and the deck editor need the server, and the server needs the database.
@@ -240,7 +240,17 @@ UI code is kept Preact-compatible: function components and hooks only.
 
 ## tools/assets — asset preparation
 
-`strip-animation-meshes.mjs` reads each Mixamo animation file, removes the embedded mesh, and writes an animation-only clip (about 80 KB instead of 2.2 MB) to `public/models/<character>/clips/`. The client does not load these yet; it still uses the combined model file. Model files are not tracked in git.
+Builds the model the game loads from the Mixamo FBX files in `assets-src/`. The workflow, including what to download and how, is in [ASSETS.md](ASSETS.md).
+
+| File | Contents |
+|---|---|
+| `build-characters.mjs` | `pnpm assets`: finds Blender, runs the script below for each character folder, then lists the clips in the result |
+| `build-character.py` | Runs inside Blender, in the background: imports the character and each animation file, names each clip after its file, exports one GLB |
+| `strip-animation-meshes.mjs` | Older script that removes the mesh from single-clip GLB files; nothing uses its output |
+
+Neither `assets-src/` nor the built model files are tracked in git.
+
+**Current limits:** all clips live in one file with the mesh, so every clip is downloaded up front. Root motion is not baked into move data, because no attack clips exist yet.
 
 ## Cross-cutting
 
