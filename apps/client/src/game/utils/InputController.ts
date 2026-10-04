@@ -22,6 +22,9 @@ export class InputController {
         document.addEventListener('pointerlockchange', this.handlePointerLockChange.bind(this));
         canvas.addEventListener('click', this.requestPointerLock.bind(this));
         document.addEventListener('mousemove', this.handleMouseMove.bind(this));
+        canvas.addEventListener('mousedown', this.handleMouseDown.bind(this));
+        window.addEventListener('mouseup', this.handleMouseUp.bind(this));
+        canvas.addEventListener('contextmenu', (event) => event.preventDefault());
 
         // Toggle debug mode with backtick key
         window.addEventListener('keydown', (event) => {
@@ -62,6 +65,19 @@ export class InputController {
             this.mouseDeltaX += event.movementX;
             this.mouseDeltaY += event.movementY;
         }
+    }
+
+    private handleMouseDown(event: MouseEvent): void {
+        // The click that locks the pointer should not also throw a punch
+        if (!this.isPointerLocked) return;
+
+        // Mouse buttons share the key map under the names mouse0, mouse1, mouse2
+        this.keys[`mouse${event.button}`] = true;
+        this.keysPressedSinceSample.add(`mouse${event.button}`);
+    }
+
+    private handleMouseUp(event: MouseEvent): void {
+        this.keys[`mouse${event.button}`] = false;
     }
 
     private requestPointerLock(): void {
@@ -121,6 +137,9 @@ export class InputController {
         if (this.isKeyActive('ShiftLeft') || this.isKeyActive('ShiftRight')) buttons |= Button.Run;
         if (this.isKeyActive('Space')) buttons |= Button.Dodge;
         if (this.isKeyActive('KeyF')) buttons |= Button.LockOn;
+        if (this.isKeyActive('mouse0') || this.isKeyActive('KeyJ')) buttons |= Button.Attack;
+        if (this.isKeyActive('mouse2') || this.isKeyActive('KeyK')) buttons |= Button.Alternate;
+        if (this.isKeyActive('KeyQ')) buttons |= Button.Guard;
 
         this.keysPressedSinceSample.clear();
 

@@ -2,6 +2,9 @@ import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
     testDir: 'e2e',
+    // Software rendering is slow, and the first page load also waits for Vite to bundle dependencies
+    workers: 1,
+    timeout: 120_000,
     use: {
         baseURL: 'http://localhost:3100',
         launchOptions: {

@@ -1,5 +1,6 @@
 import { Engine } from '@babylonjs/core/Engines/engine';
 import { GameScene } from './game/scenes/GameScene';
+import { mountHud } from './ui/mountHud';
 import './style.css';
 
 class Game {
@@ -26,6 +27,10 @@ class Game {
         // Create and initialize the game scene
         this.gameScene = new GameScene(this.engine, this.canvas);
         
+        // Mount the HUD over the canvas
+        const uiContainer = document.getElementById('ui');
+        if (uiContainer) mountHud(uiContainer);
+
         // Hide loading screen once everything is loaded
         this.hideLoadingScreen();
         

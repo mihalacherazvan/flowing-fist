@@ -14,5 +14,8 @@
     "typescript": "^5.3.3",
     "vite": "^8.3.2",
     "vitest": "^5.0.3"
+  },
+  "dependencies": {
+    "@flowing-fist/content": "workspace:*"
   }
 }

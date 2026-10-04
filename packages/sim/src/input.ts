@@ -3,7 +3,10 @@ import { TAU } from './math';
 export const Button = {
     Run: 1 << 0,
     Dodge: 1 << 1,
-    LockOn: 1 << 2
+    LockOn: 1 << 2,
+    Attack: 1 << 3,
+    Alternate: 1 << 4,
+    Guard: 1 << 5
 } as const;
 
 const MOVE_AXIS_MAX = 127;

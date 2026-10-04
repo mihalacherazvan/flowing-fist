@@ -10,14 +10,29 @@ import { Scene } from '@babylonjs/core/scene';
 import { SkyMaterial } from '@babylonjs/materials/sky';
 import type { Engine as EngineType } from '@babylonjs/core/Engines/engine';
 import type { Mesh as MeshType } from '@babylonjs/core/Meshes/mesh';
-import { TRAINING_ARENA } from '@flowing-fist/content';
-import { FixedTimestep, PI, cloneWorld, createCharacter, createWorld, stepWorld } from '@flowing-fist/sim';
-import type { WorldState } from '@flowing-fist/sim';
+import { DEFAULT_DECK, STANCES, TRAINING_ARENA } from '@flowing-fist/content';
+import {
+    FixedTimestep,
+    PI,
+    StunKind,
+    cloneWorld,
+    createCharacter,
+    createWorld,
+    getCurrentMove,
+    getMovePhase,
+    stepWorld,
+    tuning
+} from '@flowing-fist/sim';
+import type { CharacterState, WorldState } from '@flowing-fist/sim';
+import { hudStore } from '../../ui/hudStore';
 import { CameraRig } from '../camera/CameraRig';
 import { CharacterView } from '../characters/CharacterView';
+import { CombatDebugOverlay } from '../debug/CombatDebugOverlay';
+import { TrainingDummy } from '../training/TrainingDummy';
 import { InputController } from '../utils/InputController';
 
 const PLAYER_INDEX = 0;
+const CHARACTER_NAMES = ['Player', 'Dummy'];
 
 export class GameScene {
     private scene: Scene;
@@ -28,6 +43,10 @@ export class GameScene {
     private previousWorld: WorldState;
     private characterViews: CharacterView[];
     private cameraRig: CameraRig;
+    private debugOverlay: CombatDebugOverlay;
+    private dummy: TrainingDummy = new TrainingDummy();
+    private paused: boolean = false;
+    private stepRequested: boolean = false;
 
     constructor(private engine: EngineType, private canvas: HTMLCanvasElement) {
         // Create the scene
@@ -43,7 +62,7 @@ export class GameScene {
         this.world = createWorld(TRAINING_ARENA.radius, [
             createCharacter(0, 0, 0),
             createCharacter(0, 5, PI)
-        ]);
+        ], [DEFAULT_DECK, DEFAULT_DECK]);
         this.previousWorld = cloneWorld(this.world);
 
         // Create a view per character and the camera that follows the player
@@ -52,6 +71,9 @@ export class GameScene {
             new CharacterView(this.scene, 'dummy')
         ];
         this.cameraRig = new CameraRig(this.scene, this.input, new Vector3(0, 1, 0));
+        this.debugOverlay = new CombatDebugOverlay(this.scene, this.world.characters.length);
+
+        this.setupTrainingControls();
 
         // Register render loop
         this.engine.runRenderLoop(() => {
@@ -159,25 +181,79 @@ export class GameScene {
     }
 
     /**
+     * Keyboard controls that belong to training mode rather than to the fight
+     */
+    private setupTrainingControls(): void {
+        window.addEventListener('keydown', (event) => {
+            if (event.code === 'KeyG') this.dummy.cycleMode();
+            if (event.code === 'KeyH') this.debugOverlay.toggle();
+            if (event.code === 'KeyP') this.paused = !this.paused;
+            if (event.code === 'Period') this.stepRequested = true;
+        });
+    }
+
+    /**
      * Run the simulation at its fixed tick rate, then draw the result
      */
     private update(elapsedMs: number): void {
-        const ticks = this.timestep.advance(elapsedMs);
+        let ticks = this.timestep.advance(elapsedMs);
+
+        // While paused the simulation only moves when asked to, one tick at a time
+        if (this.paused) {
+            ticks = this.stepRequested ? 1 : 0;
+        }
+        this.stepRequested = false;
 
         for (let i = 0; i < ticks; i++) {
             this.previousWorld = cloneWorld(this.world);
-            stepWorld(this.world, [this.input.sampleInputFrame(this.cameraRig.getYaw())]);
+            stepWorld(this.world, [
+                this.input.sampleInputFrame(this.cameraRig.getYaw()),
+                this.dummy.sampleInputFrame()
+            ]);
         }
 
         // Blend between the last two ticks so rendering stays smooth at any frame rate
-        const alpha = this.timestep.getAlpha();
+        const alpha = this.paused ? 1 : this.timestep.getAlpha();
         this.characterViews.forEach((view, index) => {
             view.update(this.previousWorld.characters[index], this.world.characters[index], alpha);
         });
+        this.debugOverlay.update(this.world);
 
         const playerView = this.characterViews[PLAYER_INDEX];
         const isLockedOn = this.world.characters[PLAYER_INDEX].lockedOn;
         this.cameraRig.update(playerView.getPosition(), isLockedOn ? playerView.getYaw() : null);
+
+        this.publishHud();
+    }
+
+    private publishHud(): void {
+        hudStore.publish({
+            characters: this.world.characters.map((character, index) => ({
+                name: CHARACTER_NAMES[index],
+                health: character.health,
+                maxHealth: tuning.MAX_HEALTH,
+                stamina: character.stamina,
+                maxStamina: tuning.MAX_STAMINA,
+                stance: STANCES[character.stance],
+                status: GameScene.describeStatus(character)
+            })),
+            dummyMode: this.dummy.getMode(),
+            paused: this.paused
+        });
+    }
+
+    private static describeStatus(character: CharacterState): string {
+        if (character.knockoutTicks > 0) return 'Knocked out';
+        if (character.stunKind === StunKind.Hit) return 'Hit';
+        if (character.stunKind === StunKind.Block) return 'Blocked';
+        if (character.stunKind === StunKind.GuardBroken) return 'Guard broken';
+
+        const move = getCurrentMove(character);
+        if (move) return `${move.name} (${getMovePhase(character)})`;
+        if (character.dodgeTicks > 0) return 'Dodging';
+        if (character.guarding) return 'Guarding';
+
+        return '';
     }
 
     /**

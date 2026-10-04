@@ -1,14 +1,21 @@
 import { TICK_RATE } from './FixedTimestep';
+import { finishMove, getCurrentMove, resolveHits, spendStamina, startAttack } from './combat';
 import { Button, EMPTY_INPUT, inputAxisToUnit, inputYawToRadians } from './input';
 import type { InputFrame } from './input';
 import { atan2, cos, sin, wrapAngle } from './math';
+import { QueuedAttack, StunKind } from './state';
 import type { CharacterState, WorldState } from './state';
 import {
     CHARACTER_RADIUS,
     DODGE_COOLDOWN_TICKS,
     DODGE_SPEED,
+    DODGE_STAMINA_COST,
     DODGE_TICKS,
+    GUARD_MOVE_SPEED,
+    MAX_HEALTH,
+    MAX_STAMINA,
     RUN_SPEED,
+    STAMINA_REGEN_PER_TICK,
     WALK_SPEED
 } from './tuning';
 
@@ -21,6 +28,7 @@ export function stepWorld(world: WorldState, inputs: readonly InputFrame[]): voi
         stepCharacter(world, i, inputs[i] ?? EMPTY_INPUT);
     }
 
+    resolveHits(world);
     separateCharacters(world);
 
     for (const character of world.characters) {
@@ -32,6 +40,7 @@ export function stepWorld(world: WorldState, inputs: readonly InputFrame[]): voi
 
 function stepCharacter(world: WorldState, index: number, input: InputFrame): void {
     const character = world.characters[index];
+    const deck = world.decks[index];
     const pressedButtons = input.buttons & ~character.previousButtons;
     character.previousButtons = input.buttons;
 
@@ -64,33 +73,91 @@ function stepCharacter(world: WorldState, index: number, input: InputFrame): voi
         character.dodgeCooldownTicks--;
     }
 
-    const canDodge = character.dodgeTicks === 0 && character.dodgeCooldownTicks === 0;
-    if ((pressedButtons & Button.Dodge) && isMoving && canDodge) {
-        const moveLength = Math.sqrt(moveX * moveX + moveZ * moveZ);
-        character.dodgeTicks = DODGE_TICKS;
-        character.dodgeDirectionX = moveX / moveLength;
-        character.dodgeDirectionZ = moveZ / moveLength;
-    }
+    const requestedAttack = (pressedButtons & Button.Attack) ? QueuedAttack.Sequence
+        : (pressedButtons & Button.Alternate) ? QueuedAttack.Alternate
+            : QueuedAttack.None;
+    const isGuardHeld = (input.buttons & Button.Guard) !== 0;
 
-    if (character.lockedOn && target) {
-        const toTargetX = target.x - character.x;
-        const toTargetZ = target.z - character.z;
-        if (toTargetX !== 0 || toTargetZ !== 0) {
-            character.yaw = atan2(toTargetX, toTargetZ);
+    const isIncapacitated = character.knockoutTicks > 0 || character.stunTicks > 0;
+    const isAttacking = character.moveIndex >= 0;
+
+    // Decide what to start this tick. Only a character in neutral can start anything.
+    if (!isIncapacitated && !isAttacking) {
+        if (character.lockedOn && target) {
+            faceTarget(character, target);
+        } else if (isMoving) {
+            character.yaw = wrapAngle(cameraYaw);
         }
-    } else if (isMoving) {
-        character.yaw = wrapAngle(cameraYaw);
+
+        if (character.dodgeTicks === 0) {
+            character.guarding = isGuardHeld && character.stamina > 0;
+
+            const canDodge = isMoving
+                && character.dodgeCooldownTicks === 0
+                && character.stamina >= DODGE_STAMINA_COST;
+
+            if (requestedAttack !== QueuedAttack.None && startAttack(character, deck, requestedAttack, false)) {
+                // startAttack has set the move up
+            } else if ((pressedButtons & Button.Dodge) && canDodge) {
+                const moveLength = Math.sqrt(moveX * moveX + moveZ * moveZ);
+                character.dodgeTicks = DODGE_TICKS;
+                character.dodgeDirectionX = moveX / moveLength;
+                character.dodgeDirectionZ = moveZ / moveLength;
+                character.guarding = false;
+                spendStamina(character, DODGE_STAMINA_COST);
+            }
+        }
     }
 
+    // Then play one tick of whatever the character is doing
     let directionX = 0;
     let directionZ = 0;
     let speed = 0;
+    // Attacks carry the character forward, but that is not walking as far as animation is concerned
+    let isLocomotion = false;
+    character.running = false;
 
-    if (character.dodgeTicks > 0) {
+    const move = getCurrentMove(character);
+
+    if (character.knockoutTicks > 0) {
+        character.knockoutTicks--;
+        if (character.knockoutTicks === 0) {
+            character.health = MAX_HEALTH;
+            character.stamina = MAX_STAMINA;
+        }
+    } else if (character.stunTicks > 0) {
+        // Keep blocking through block stun so the rest of a chain is blocked too
+        character.guarding = character.stunKind === StunKind.Block && isGuardHeld && character.stamina > 0;
+
+        character.stunTicks--;
+        if (character.stunTicks === 0) {
+            character.stunKind = StunKind.None;
+        }
+    } else if (move) {
+        if (requestedAttack !== QueuedAttack.None && character.moveTick > 0) {
+            character.queuedAttack = requestedAttack;
+        }
+
+        if (character.moveTick < move.startupTicks && character.lockedOn && target) {
+            faceTarget(character, target);
+        }
+
+        const advanceTicks = move.startupTicks + move.activeTicks;
+        if (character.moveTick < advanceTicks) {
+            directionX = sin(character.yaw);
+            directionZ = cos(character.yaw);
+            speed = move.advance / advanceTicks * TICK_RATE;
+        }
+
+        character.moveTick++;
+        if (character.moveTick >= advanceTicks + move.recoveryTicks) {
+            finishMove(character, deck);
+        }
+    } else if (character.dodgeTicks > 0) {
         directionX = character.dodgeDirectionX;
         directionZ = character.dodgeDirectionZ;
         speed = DODGE_SPEED;
-        character.running = false;
+        isLocomotion = true;
 
         character.dodgeTicks--;
         if (character.dodgeTicks === 0) {
@@ -99,20 +166,52 @@ function stepCharacter(world: WorldState, index: number, input: InputFrame): voi
     } else if (isMoving) {
         directionX = moveX;
         directionZ = moveZ;
-        character.running = (input.buttons & Button.Run) !== 0;
-        speed = character.running ? RUN_SPEED : WALK_SPEED;
-    } else {
-        character.running = false;
+        isLocomotion = true;
+
+        if (character.guarding) {
+            speed = GUARD_MOVE_SPEED;
+        } else {
+            character.running = (input.buttons & Button.Run) !== 0;
+            speed = character.running ? RUN_SPEED : WALK_SPEED;
+        }
     }
+
+    regenerateStamina(character);
 
     character.x += directionX * speed / TICK_RATE;
     character.z += directionZ * speed / TICK_RATE;
 
     // Express the movement direction relative to facing so the view can pick an animation
-    const facingSin = sin(character.yaw);
-    const facingCos = cos(character.yaw);
-    character.moveRight = directionX * facingCos - directionZ * facingSin;
-    character.moveForward = directionX * facingSin + directionZ * facingCos;
+    if (isLocomotion) {
+        const facingSin = sin(character.yaw);
+        const facingCos = cos(character.yaw);
+        character.moveRight = directionX * facingCos - directionZ * facingSin;
+        character.moveForward = directionX * facingSin + directionZ * facingCos;
+    } else {
+        character.moveRight = 0;
+        character.moveForward = 0;
+    }
+}
+
+function faceTarget(character: CharacterState, target: CharacterState): void {
+    const toTargetX = target.x - character.x;
+    const toTargetZ = target.z - character.z;
+
+    if (toTargetX !== 0 || toTargetZ !== 0) {
+        character.yaw = atan2(toTargetX, toTargetZ);
+    }
+}
+
+function regenerateStamina(character: CharacterState): void {
+    if (character.staminaRegenDelayTicks > 0) {
+        character.staminaRegenDelayTicks--;
+        return;
+    }
+
+    const isBusy = character.guarding || character.moveIndex >= 0 || character.dodgeTicks > 0;
+    if (!isBusy && character.knockoutTicks === 0) {
+        character.stamina = Math.min(MAX_STAMINA, character.stamina + STAMINA_REGEN_PER_TICK);
+    }
 }
 
 /**

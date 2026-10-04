@@ -29,6 +29,10 @@ export class CameraRig {
         this.camera.wheelDeltaPercentage = 0.01;
         this.camera.attachControl(scene.getEngine().getRenderingCanvas(), true);
 
+        // Mouse buttons are attacks, so the camera only keeps the wheel; rotation comes from the locked pointer
+        this.camera.inputs.removeByType('ArcRotateCameraPointersInput');
+        this.camera.inputs.removeByType('ArcRotateCameraKeyboardMoveInput');
+
         // Add beta (vertical) angle limits
         this.camera.lowerBetaLimit = Math.PI / 6;     // Limit looking down (higher value = less down)
         this.camera.upperBetaLimit = Math.PI / 2.2;   // Limit looking up (lower value = less up)

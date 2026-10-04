@@ -65,3 +65,45 @@ test('training mode: move, dodge and lock on', async ({ page }, testInfo) => {
     await page.screenshot({ path: testInfo.outputPath('locked-on.png') });
     expect(errors).toEqual([]);
 });
+
+test('training mode: hit the dummy, then have it block', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (error) => errors.push(error.message));
+    page.on('console', (message) => {
+        if (message.type() === 'error') errors.push(message.text());
+    });
+
+    await page.goto('/');
+    await page.waitForFunction(() => {
+        const game = (window as unknown as { flowingFist?: GameHandle }).flowingFist;
+        return game !== undefined && game.getScene().animationGroups.length >= 12;
+    });
+
+    // Lock on and wait for the camera to swing round, so that forward means towards the dummy
+    await page.keyboard.press('KeyF');
+    await expect.poll(async () => (await getCharacters(page))[0].lockedOn).toBe(true);
+    await page.waitForTimeout(1500);
+
+    await page.keyboard.down('KeyW');
+    await expect.poll(async () => {
+        const [player, dummy] = await getCharacters(page);
+        return Math.hypot(dummy.x - player.x, dummy.z - player.z);
+    }).toBeLessThan(1.3);
+    await page.keyboard.up('KeyW');
+
+    await page.keyboard.press('KeyJ');
+    await expect.poll(async () => (await getCharacters(page))[1].health).toBeLessThan(100);
+    await expect(page.getByTestId('hud-dummy')).toContainText('Hit');
+
+    // Let the jab finish, then switch the dummy to guarding
+    await expect.poll(async () => (await getCharacters(page))[0].moveIndex).toBe(-1);
+    await page.keyboard.press('KeyG');
+    await expect.poll(async () => (await getCharacters(page))[1].guarding).toBe(true);
+
+    const healthBeforeBlock = (await getCharacters(page))[1].health;
+    await page.keyboard.press('KeyJ');
+    await expect.poll(async () => (await getCharacters(page))[1].stamina).toBeLessThan(100);
+    expect((await getCharacters(page))[1].health).toBe(healthBeforeBlock);
+
+    expect(errors).toEqual([]);
+});

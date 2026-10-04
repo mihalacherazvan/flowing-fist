@@ -42,3 +42,78 @@ html, body {
   50% { opacity: 1; }
   100% { opacity: 0.5; }
 }
+
+#ui {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.hud-panel {
+  position: absolute;
+  top: 16px;
+  width: min(32vw, 360px);
+}
+
+.hud-panel-left { left: 16px; }
+.hud-panel-right { right: 16px; text-align: right; }
+.hud-panel-right .hud-row { flex-direction: row-reverse; }
+
+.hud-name {
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.hud-bar {
+  height: 12px;
+  margin-bottom: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.hud-bar-fill { height: 100%; }
+.hud-panel-right .hud-bar-fill { margin-left: auto; }
+.hud-health { background: #d9423a; }
+.hud-stamina { background: #e8c53a; }
+
+.hud-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.hud-stances {
+  display: grid;
+  grid-template-columns: 14px 14px;
+  gap: 3px;
+}
+
+/* Laid out as seen from above: front stances on top, left stances on the left */
+.hud-stance {
+  width: 14px;
+  height: 14px;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.hud-stance-front-left { grid-area: 1 / 1; }
+.hud-stance-front-right { grid-area: 1 / 2; }
+.hud-stance-back-left { grid-area: 2 / 1; }
+.hud-stance-back-right { grid-area: 2 / 2; }
+.hud-stance.is-current { background: white; }
+
+.hud-stance-name { font-size: 13px; }
+.hud-status { font-size: 12px; opacity: 0.85; min-height: 15px; }
+
+.hud-help {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  font-size: 12px;
+  line-height: 1.5;
+  opacity: 0.85;
+}
