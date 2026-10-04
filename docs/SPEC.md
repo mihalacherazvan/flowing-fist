@@ -1,8 +1,12 @@
 # Flowing Fist — High-Level Spec
 
+## Status
+
+_As of 2026-10-04:_ milestones **M0–M3 are done**; **M4 is next**. This document is the plan. What actually exists is described in [ARCHITECTURE.md](ARCHITECTURE.md), and how the game plays in [GAMEPLAY.md](GAMEPLAY.md).
+
 ## Context
 
-Flowing Fist is a browser-based, Absolver-style martial-arts game. Today the parent folder holds only `flowing-fist-client/` (its own git repo, 3 commits): Babylon.js 8.1 + Vite + TypeScript, a third-person orbit camera, WASD/strafe locomotion on a Mixamo Y-bot, no physics, combat or networking.
+Flowing Fist is a browser-based, Absolver-style martial-arts game. It began as a single client folder with Babylon.js, a third-person camera and WASD locomotion on a Mixamo Y-bot, and no physics, combat or networking.
 
 This spec defines the first shippable game and the architecture behind it. Decisions already made:
 
@@ -69,7 +73,7 @@ flowing-fist/                  (git root; client history moved up and preserved)
 - Client predicts both characters (repeating the opponent's last input), rolls back and re-simulates when confirmed inputs differ, and hard-corrects from a snapshot on hash mismatch.
 - 2–3 frames of input delay, adaptive to ping, to cut rollback distance.
 - **Colyseus Schema state sync is used only for room metadata** (players, round score, timer, phase). Fight state goes through raw messages.
-- **Determinism:** IEEE float arithmetic is consistent across JS engines but `Math.sin/cos/pow` are not, so the sim uses its own trig (lookup tables). Server snapshots correct any residual drift, so this needs to be good, not perfect.
+- **Determinism:** IEEE float arithmetic is consistent across JS engines but `Math.sin/cos/pow` are not, so the sim uses its own trig (polynomial approximations built from basic arithmetic). Server snapshots correct any residual drift, so this needs to be good, not perfect.
 - **Known risk:** WebSocket is TCP, so packet loss causes head-of-line stalls. Acceptable for regional play; WebTransport datagrams are the planned mitigation.
 - **Anti-cheat:** the server owns the sim, validates decks against owned moves, and rejects out-of-range or over-rate inputs.
 
@@ -95,11 +99,11 @@ A dev-only **move viewer** page: scrub an animation clip frame by frame, place h
 
 ## Milestones
 
-1. **M0 Foundation** — monorepo restructure, Babylon upgrade, lint/test/CI, asset pipeline for animation-only clips.
-2. **M1 Sim core** — fixed-tick loop, deterministic math, locomotion and lock-on in `packages/sim`; client ported to sim/view split.
-3. **M2 Offline combat** — stances, attacks, hit/guard/stamina, hitbox overlay, move viewer, 8–12 moves, training dummy.
-4. **M3 Networked duel** — `DuelRoom`, input relay, prediction and rollback, snapshots, latency simulation, reconnection.
-5. **M4 Decks and accounts** — auth, database, deck editor UI, server-side deck validation.
+1. **M0 Foundation** (done) — monorepo restructure, Babylon upgrade, lint/test/CI, asset pipeline for animation-only clips.
+2. **M1 Sim core** (done) — fixed-tick loop, deterministic math, locomotion and lock-on in `packages/sim`; client ported to sim/view split.
+3. **M2 Offline combat** (done, except the move viewer, which waits for attack animation clips) — stances, attacks, hit/guard/stamina, hitbox overlay, move viewer, 8–12 moves, training dummy.
+4. **M3 Networked duel** (done, except input delay and a Node-versus-browser determinism test) — `DuelRoom`, input relay, prediction and rollback, snapshots, latency simulation, reconnection.
+5. **M4 Decks and accounts** (next) — auth, database, deck editor UI, server-side deck validation.
 6. **M5 Match flow** — matchmaking, rounds, HUD, results, rating, parry style, feints.
 7. **M6 Polish and launch** — VFX/SFX, second arena, more moves, gamepad, replays, deployment.
 
