@@ -2,6 +2,8 @@ import { useSyncExternalStore } from 'react';
 import { STANCES } from '@flowing-fist/content';
 import { hudStore } from './hudStore';
 import type { HudCharacter } from './hudStore';
+import { Menu } from './Menu';
+import { menuStore } from './menuStore';
 
 function Bar({ label, value, max, className }: { label: string; value: number; max: number; className: string }) {
     return (
@@ -61,7 +63,11 @@ export function Hud() {
                 >
                     {isTraining ? 'Find online duel (O)' : 'Back to training (O)'}
                 </button>
+                <button className="hud-button" data-testid="menu-open" onClick={() => menuStore.setOpen(true)}>
+                    Decks and account (B)
+                </button>
             </div>
+            <Menu />
         </div>
     );
 }

@@ -120,6 +120,7 @@ html, body {
 
 .hud-button {
   margin-top: 6px;
+  margin-right: 6px;
   padding: 4px 10px;
   pointer-events: auto;
   cursor: pointer;
@@ -130,3 +131,86 @@ html, body {
 }
 
 .hud-button:hover { background: rgba(0, 0, 0, 0.8); }
+
+.menu {
+  position: absolute;
+  top: 5vh;
+  left: 50%;
+  width: min(94vw, 1100px);
+  max-height: 90vh;
+  overflow: auto;
+  transform: translateX(-50%);
+  padding: 16px 20px;
+  pointer-events: auto;
+  font-size: 14px;
+  text-shadow: none;
+  background: rgba(20, 20, 24, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.menu-header h1 { font-size: 18px; }
+
+.menu-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.menu-button,
+.menu-input {
+  padding: 5px 10px;
+  font: inherit;
+  color: white;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.menu-button { cursor: pointer; }
+.menu-button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.2); }
+.menu-button:disabled, .menu-input:disabled { opacity: 0.4; cursor: default; }
+.menu-input option { color: black; }
+
+.menu-hint { margin-top: 8px; font-size: 12px; opacity: 0.75; }
+.menu-message { margin-top: 10px; min-height: 18px; }
+.menu-problem { margin-top: 6px; color: #ff9d96; }
+
+.account-panel {
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.account-panel .menu-actions { margin-top: 0; }
+
+.account-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.account-form label { display: grid; gap: 4px; font-size: 12px; }
+.account-form .menu-actions { margin-top: 0; }
+.account-form .menu-hint { flex-basis: 100%; margin-top: 0; }
+
+.deck-editor { display: flex; gap: 20px; }
+.deck-list { flex: 0 0 160px; display: grid; gap: 6px; align-content: start; list-style: none; }
+.deck-list-item { width: 100%; text-align: left; }
+.deck-list-item.is-selected { background: rgba(255, 255, 255, 0.25); }
+.deck-form { flex: 1; min-width: 0; }
+
+.deck-table { width: 100%; margin-top: 12px; border-collapse: collapse; table-layout: fixed; }
+.deck-table th:first-child { width: 84px; }
+.deck-table th { padding: 4px 6px 4px 0; font-size: 12px; text-align: left; white-space: nowrap; }
+.deck-table td { padding: 3px 6px 3px 0; }
+.deck-table select { width: 100%; padding: 5px 4px; font-size: 13px; }

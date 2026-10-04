@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1791117135558,
+      "tag": "0000_create_users_and_decks",
+      "breakpoints": true
+    }
+  ]
+}

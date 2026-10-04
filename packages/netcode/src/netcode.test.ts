@@ -10,7 +10,7 @@ import { PredictionClient } from './PredictionClient';
 const DECKS = [DEFAULT_DECK, DEFAULT_DECK];
 
 function createStart(authority: DuelAuthority, slot: number): StartMessage {
-    return { protocolVersion: PROTOCOL_VERSION, slot, decks: DECKS, snapshot: authority.getSnapshot() };
+    return { protocolVersion: PROTOCOL_VERSION, slot, decks: DECKS, names: ['first', 'second'], snapshot: authority.getSnapshot() };
 }
 
 /**

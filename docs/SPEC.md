@@ -2,7 +2,7 @@
 
 ## Status
 
-_As of 2026-10-04:_ milestones **M0–M3 are done**; **M4 is next**. This document is the plan. What actually exists is described in [ARCHITECTURE.md](ARCHITECTURE.md), and how the game plays in [GAMEPLAY.md](GAMEPLAY.md).
+_As of 2026-10-04:_ milestones **M0–M4 are done**; **M5 is next**. This document is the plan. What actually exists is described in [ARCHITECTURE.md](ARCHITECTURE.md), and how the game plays in [GAMEPLAY.md](GAMEPLAY.md).
 
 ## Context
 
@@ -99,12 +99,12 @@ A dev-only **move viewer** page: scrub an animation clip frame by frame, place h
 
 ## Milestones
 
-1. **M0 Foundation** (done) — monorepo restructure, Babylon upgrade, lint/test/CI, asset pipeline for animation-only clips.
+1. **M0 Foundation** (done) — monorepo restructure, Babylon upgrade, lint/test/CI, asset pipeline for animation-only clips. The CI workflow was removed again during M4: checks are run by hand and browser play-testing is manual.
 2. **M1 Sim core** (done) — fixed-tick loop, deterministic math, locomotion and lock-on in `packages/sim`; client ported to sim/view split.
 3. **M2 Offline combat** (done, except the move viewer, which waits for attack animation clips) — stances, attacks, hit/guard/stamina, hitbox overlay, move viewer, 8–12 moves, training dummy.
 4. **M3 Networked duel** (done, except input delay and a Node-versus-browser determinism test) — `DuelRoom`, input relay, prediction and rollback, snapshots, latency simulation, reconnection.
-5. **M4 Decks and accounts** (next) — auth, database, deck editor UI, server-side deck validation.
-6. **M5 Match flow** — matchmaking, rounds, HUD, results, rating, parry style, feints.
+5. **M4 Decks and accounts** (done, except OAuth sign-in and the `user_moves` table, which waits for move learning) — auth, database, deck editor UI, server-side deck validation.
+6. **M5 Match flow** (next) — matchmaking, rounds, HUD, results, rating, parry style, feints.
 7. **M6 Polish and launch** — VFX/SFX, second arena, more moves, gamepad, replays, deployment.
 
 **Later:** AI opponents and co-op zones, move learning, further defensive styles, weapons, WebTransport, multi-region.

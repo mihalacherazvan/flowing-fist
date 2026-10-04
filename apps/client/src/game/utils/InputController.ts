@@ -1,5 +1,6 @@
 import { Button, encodeInput } from '@flowing-fist/sim';
 import type { InputFrame } from '@flowing-fist/sim';
+import { menuStore } from '../../ui/menuStore';
 
 /**
  * Handles keyboard and mouse input for the game
@@ -36,6 +37,9 @@ export class InputController {
     }
 
     private handleKeyDown(event: KeyboardEvent): void {
+        // Typing in the menu must not move the character
+        if (menuStore.isOpen()) return;
+
         // Physical key codes keep WASD in place on non-QWERTY layouts
         this.keys[event.code.toLowerCase()] = true;
         this.keysPressedSinceSample.add(event.code.toLowerCase());
@@ -125,6 +129,14 @@ export class InputController {
      * @param cameraYaw yaw the movement keys are relative to, in radians
      */
     public sampleInputFrame(cameraYaw: number): InputFrame {
+        if (menuStore.isOpen()) {
+            // Also forget keys that were held when the menu opened; their release may never be seen
+            this.keys = {};
+            this.keysPressedSinceSample.clear();
+
+            return encodeInput(0, 0, 0, cameraYaw);
+        }
+
         let moveRight = 0;
         let moveForward = 0;
 

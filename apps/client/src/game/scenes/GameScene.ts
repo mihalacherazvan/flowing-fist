@@ -13,7 +13,9 @@ import type { Mesh as MeshType } from '@babylonjs/core/Meshes/mesh';
 import { STANCES } from '@flowing-fist/content';
 import { StunKind, getCurrentMove, getMovePhase, tuning } from '@flowing-fist/sim';
 import type { CharacterState, WorldState } from '@flowing-fist/sim';
+import { accountStore } from '../../account/accountStore';
 import { hudStore } from '../../ui/hudStore';
+import { menuStore } from '../../ui/menuStore';
 import { CameraRig } from '../camera/CameraRig';
 import { CharacterView } from '../characters/CharacterView';
 import { CombatDebugOverlay } from '../debug/CombatDebugOverlay';
@@ -28,7 +30,7 @@ export class GameScene {
     private scene: Scene;
     private ground!: MeshType;
     private input: InputController;
-    private session: GameSession = new TrainingSession();
+    private session: GameSession = new TrainingSession(accountStore.getState().activeDeck);
     private characterViews: CharacterView[];
     private cameraRig: CameraRig;
     private debugOverlay: CombatDebugOverlay;
@@ -162,17 +164,38 @@ export class GameScene {
      * Switching between training and an online duel, from the keyboard or the HUD
      */
     private setupSessionControls(): void {
-        hudStore.actions = {
-            startTraining: () => this.startSession(new TrainingSession()),
-            startDuel: () => this.startSession(new DuelSession())
-        };
+        const startTraining = () => this.startSession(new TrainingSession(accountStore.getState().activeDeck));
+        const startDuel = () => this.startSession(new DuelSession());
+
+        hudStore.actions = { startTraining, startDuel };
 
         window.addEventListener('keydown', (event) => {
+            if (menuStore.isOpen()) {
+                if (event.code === 'Escape') menuStore.setOpen(false);
+                return;
+            }
+
             if (event.code === 'KeyH') this.debugOverlay.toggle();
+            if (event.code === 'KeyB') menuStore.setOpen(true);
             if (event.code === 'KeyO') {
-                this.startSession(this.session.mode === 'training' ? new DuelSession() : new TrainingSession());
+                if (this.session.mode === 'training') {
+                    startDuel();
+                } else {
+                    startTraining();
+                }
             }
         });
+
+        // Training restarts with a newly chosen deck. A duel keeps the deck it started with.
+        let trainingDeck = accountStore.getState().activeDeck;
+        accountStore.subscribe(() => {
+            const { activeDeck } = accountStore.getState();
+            if (activeDeck === trainingDeck) return;
+
+            trainingDeck = activeDeck;
+            if (this.session.mode === 'training') startTraining();
+        });
+        accountStore.connect();
     }
 
     private startSession(session: GameSession): void {

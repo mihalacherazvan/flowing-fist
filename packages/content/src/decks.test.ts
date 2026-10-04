@@ -1,14 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_DECK, validateDeck } from './decks';
-import type { CombatDeck } from './decks';
+import { DEFAULT_DECK, createEmptyDeck, parseDeck, validateDeck } from './decks';
 import { MOVE_LIST } from './moves';
 
-function emptyDeck(): CombatDeck {
-    return {
-        sequences: { 'front-right': [], 'front-left': [], 'back-right': [], 'back-left': [] },
-        alternates: { 'front-right': null, 'front-left': null, 'back-right': null, 'back-left': null }
-    };
-}
+const emptyDeck = createEmptyDeck;
 
 describe('validateDeck', () => {
     it('accepts the default deck and an empty deck', () => {
@@ -66,6 +60,33 @@ describe('move list', () => {
             expect(move.startupTicks).toBeGreaterThan(0);
             expect(move.activeTicks).toBeGreaterThan(0);
             expect(move.hitboxes.length).toBeGreaterThan(0);
+        }
+    });
+});
+
+describe('parseDeck', () => {
+    it('returns a copy of a well-formed deck, without unknown fields', () => {
+        const parsed = parseDeck({ ...JSON.parse(JSON.stringify(DEFAULT_DECK)), extra: true });
+
+        expect(parsed).toEqual(DEFAULT_DECK);
+        expect(parsed).not.toBe(DEFAULT_DECK);
+    });
+
+    it('refuses anything that is not shaped like a deck', () => {
+        const missingStance = JSON.parse(JSON.stringify(DEFAULT_DECK));
+        delete missingStance.sequences['back-left'];
+
+        const wrongMoveType = JSON.parse(JSON.stringify(DEFAULT_DECK));
+        wrongMoveType.sequences['front-right'] = [1, 2];
+
+        const wrongAlternateType = JSON.parse(JSON.stringify(DEFAULT_DECK));
+        wrongAlternateType.alternates['front-right'] = ['elbow'];
+
+        const tooLong = JSON.parse(JSON.stringify(DEFAULT_DECK));
+        tooLong.sequences['front-right'] = ['jab', 'cross', 'hook', 'elbow'];
+
+        for (const value of [null, 'deck', [], {}, { sequences: {}, alternates: null }, missingStance, wrongMoveType, wrongAlternateType, tooLong]) {
+            expect(parseDeck(value)).toBeNull();
         }
     });
 });

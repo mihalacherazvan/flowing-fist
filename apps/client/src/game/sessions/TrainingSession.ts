@@ -1,6 +1,8 @@
 import { DEFAULT_DECK, TRAINING_ARENA } from '@flowing-fist/content';
+import type { CombatDeck } from '@flowing-fist/content';
 import { FixedTimestep, PI, cloneWorld, createCharacter, createWorld, stepWorld } from '@flowing-fist/sim';
 import type { InputFrame, WorldState } from '@flowing-fist/sim';
+import { menuStore } from '../../ui/menuStore';
 import { TrainingDummy } from '../training/TrainingDummy';
 import type { GameSession } from './GameSession';
 
@@ -17,18 +19,23 @@ export class TrainingSession implements GameSession {
     private paused: boolean = false;
     private stepRequested: boolean = false;
 
-    constructor() {
+    /**
+     * @param deck the player's deck; the dummy always fights with the default one
+     */
+    constructor(deck: CombatDeck) {
         // The player and the dummy facing each other
         this.world = createWorld(TRAINING_ARENA.radius, [
             createCharacter(0, 0, 0),
             createCharacter(0, 5, PI)
-        ], [DEFAULT_DECK, DEFAULT_DECK]);
+        ], [deck, DEFAULT_DECK]);
         this.previousWorld = cloneWorld(this.world);
 
         window.addEventListener('keydown', this.handleKeyDown);
     }
 
     private handleKeyDown = (event: KeyboardEvent): void => {
+        if (menuStore.isOpen()) return;
+
         if (event.code === 'KeyG') this.dummy.cycleMode();
         if (event.code === 'KeyP') this.paused = !this.paused;
         if (event.code === 'Period') this.stepRequested = true;

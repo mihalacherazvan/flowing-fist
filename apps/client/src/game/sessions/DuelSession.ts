@@ -2,19 +2,17 @@ import { Client } from '@colyseus/sdk';
 import type { Room } from '@colyseus/sdk';
 import { DEFAULT_DECK, TRAINING_ARENA } from '@flowing-fist/content';
 import { PredictionClient } from '@flowing-fist/netcode';
-import { DEFAULT_SERVER_PORT, DUEL_ROOM_NAME, MessageType, PROTOCOL_VERSION } from '@flowing-fist/protocol';
+import { DUEL_ROOM_NAME, MessageType, PROTOCOL_VERSION } from '@flowing-fist/protocol';
 import type { OpponentMessage, SnapshotMessage, StartMessage, TickMessage } from '@flowing-fist/protocol';
 import { FixedTimestep, PI, createCharacter, createWorld } from '@flowing-fist/sim';
 import type { InputFrame, WorldState } from '@flowing-fist/sim';
+import { accountStore } from '../../account/accountStore';
+import { getServerUrl } from '../../api/apiClient';
 import type { GameSession } from './GameSession';
 
 const MAX_TICKS_PER_FRAME = 60;
 
 type DuelPhase = 'connecting' | 'waiting' | 'fighting' | 'reconnecting' | 'ended';
-
-function getServerUrl(): string {
-    return import.meta.env.VITE_SERVER_URL ?? `${location.protocol}//${location.hostname}:${DEFAULT_SERVER_PORT}`;
-}
 
 /**
  * Artificial one-way delay in milliseconds, from ?latency= in the page address.
@@ -43,6 +41,7 @@ export class DuelSession implements GameSession {
     private awaitingSnapshot: boolean = false;
     private latencyMs: number = getSimulatedLatencyMs();
     private disposed: boolean = false;
+    private playerNames: string[] = [];
     private world: WorldState;
     private previousWorld: WorldState;
 
@@ -59,7 +58,18 @@ export class DuelSession implements GameSession {
 
     private async connect(): Promise<void> {
         try {
-            const room = await new Client(getServerUrl()).joinOrCreate(DUEL_ROOM_NAME);
+            // The server may have been unreachable when the page loaded
+            await accountStore.connect();
+            const token = accountStore.getToken();
+            if (accountStore.getState().status !== 'online' || !token) {
+                this.end(`Could not reach the server at ${getServerUrl()}`);
+                return;
+            }
+
+            // The server picks the deck from the account behind this token
+            const client = new Client(getServerUrl());
+            client.auth.token = token;
+            const room = await client.joinOrCreate(DUEL_ROOM_NAME);
             if (this.disposed) {
                 room.leave();
                 return;
@@ -86,7 +96,9 @@ export class DuelSession implements GameSession {
             room.onLeave(this.delayed(() => this.end('Disconnected')));
             room.onError((_code, message) => this.end(message ?? 'Connection error'));
         } catch (error) {
-            this.end(`Could not reach the server at ${getServerUrl()}`);
+            // A refusal carries the server's reason (an error code and message); anything else is the network
+            const refusal = error instanceof Error && typeof (error as { code?: unknown }).code === 'number' ? error.message : '';
+            this.end(refusal || `Could not reach the server at ${getServerUrl()}`);
         }
     }
 
@@ -115,6 +127,7 @@ export class DuelSession implements GameSession {
 
         // Also sent after a reconnection, in which case this starts over from the server's state
         this.prediction = new PredictionClient(message);
+        this.playerNames = message.names;
         this.awaitingSnapshot = false;
         this.phase = 'fighting';
     }
@@ -141,7 +154,9 @@ export class DuelSession implements GameSession {
     }
 
     public getCharacterNames(): string[] {
-        return this.getLocalPlayerIndex() === 0 ? ['You', 'Opponent'] : ['Opponent', 'You'];
+        const localIndex = this.getLocalPlayerIndex();
+
+        return [0, 1].map((index) => index === localIndex ? 'You' : this.playerNames[index] ?? 'Opponent');
     }
 
     public update(elapsedMs: number, sampleInput: () => InputFrame): void {

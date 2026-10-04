@@ -14,6 +14,47 @@ export interface CombatDeck {
 }
 
 /**
+ * A deck with nothing in it, as a starting point for building one
+ */
+export function createEmptyDeck(): CombatDeck {
+    return {
+        sequences: { 'front-right': [], 'front-left': [], 'back-right': [], 'back-left': [] },
+        alternates: { 'front-right': null, 'front-left': null, 'back-right': null, 'back-left': null }
+    };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Read a deck from data that cannot be trusted (a request body, stored JSON).
+ * This only checks the shape; the rules are checked by validateDeck.
+ *
+ * @returns a copy holding only the known fields, or null when the shape is wrong
+ */
+export function parseDeck(value: unknown): CombatDeck | null {
+    if (!isRecord(value) || !isRecord(value.sequences) || !isRecord(value.alternates)) return null;
+
+    const deck = createEmptyDeck();
+
+    for (const stance of STANCES) {
+        const sequence = value.sequences[stance];
+        // Longer sequences are refused here so that an oversized request is never walked
+        if (!Array.isArray(sequence) || sequence.length > MAX_SEQUENCE_LENGTH) return null;
+        if (!sequence.every((moveId) => typeof moveId === 'string')) return null;
+
+        const alternate = value.alternates[stance];
+        if (alternate !== null && typeof alternate !== 'string') return null;
+
+        deck.sequences[stance] = [...sequence];
+        deck.alternates[stance] = alternate;
+    }
+
+    return deck;
+}
+
+/**
  * Check a deck against the deck-building rules
  *
  * @returns one message per problem, empty when the deck is valid

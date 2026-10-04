@@ -2,7 +2,7 @@
 
 How the game plays **today**. Like [ARCHITECTURE.md](ARCHITECTURE.md), this is updated as the game changes; planned features are in [SPEC.md](SPEC.md).
 
-_Last updated: 2026-10-04, after milestone M3 (online duels)._
+_Last updated: 2026-10-04, after milestone M4 (decks and accounts)._
 
 > All combat numbers are placeholders. There are no attack animations yet, so an attack shows only as your character sliding forward plus the coloured hitbox overlay (see [Reading the overlay](#reading-the-overlay)).
 
@@ -22,6 +22,7 @@ Click the game once to capture the mouse; press Esc to release it. The click tha
 | Guard | Hold Q |
 | Show / hide hitbox overlay | H |
 | Switch between training and online duel | O |
+| Open the deck editor and account menu | B (Esc closes it) |
 
 Training mode only:
 
@@ -71,7 +72,7 @@ While attacking you cannot move, dodge or guard. Each attack steps you forward a
 
 ### The default deck
 
-Everyone currently plays this deck.
+You play this deck until you build and choose your own (see [Building a deck](#building-a-deck)). The training dummy always plays it.
 
 | Stance | Sequence (Attack) | Alternate |
 |---|---|---|
@@ -102,6 +103,28 @@ Timings are in ticks; 60 ticks is one second. *Startup* is the wind-up before th
 | Sweep | back-left → front-left | 17 / 5 / 24 | 10 | 13 | 12 |
 
 The source of truth is `packages/content/src/moves.ts`.
+
+## Building a deck
+
+Press **B** (or click "Decks and account") to open the menu. It needs the server; without it, training carries on with the deck you last used. While the menu is open the game ignores the keyboard.
+
+- The grid has one row per stance: three **Attack** slots for the sequence and one **Alternate** slot.
+- A slot only offers the moves that are legal there: they start in the right stance (the row's stance for the first attack and the alternate, otherwise the stance the previous attack ends in) and are not used anywhere else in the deck. To move an attack to another slot, empty its current slot first.
+- A later slot unlocks once the one before it is filled. Changing an attack removes the attacks after it that no longer chain.
+- Hovering a filled slot shows the move's damage, stamina cost and height.
+- **Save** stores the deck on the server, which checks the same rules again. You can keep up to 8 decks.
+- **Fight with this deck** makes it your active deck, marked ✓. Your first saved deck becomes active by itself. Training restarts with the new deck at once; an online duel in progress keeps the deck it started with.
+- Deleting your active deck puts you back on the default deck until you choose another.
+
+## Accounts
+
+You are given a guest account on your first visit, so decks can be saved straight away. A guest exists only in that browser: clear its storage and the guest and its decks are gone.
+
+- **Create account** gives the guest an email, a password (8 characters or more) and a display name. Your decks stay.
+- **Log in** switches to an existing account, on any machine. The guest you were is left behind.
+- **Log out** carries on as a new guest.
+
+Your display name is what your opponent sees above your health bar.
 
 ## Getting hit
 
@@ -160,9 +183,11 @@ The game starts here and needs no server. You face a dummy that always turns tow
 
 ## Online duel
 
-1. Start the server (`pnpm run server`) and the client (`pnpm run client`).
+1. Start the database (`docker compose up -d`), the server (`pnpm run server`) and the client (`pnpm run client`).
 2. Open the game in two tabs or on two machines.
-3. Press **O** (or click "Find online duel") in each. The first player waits; the fight starts when the second joins. Fighters start 6 units apart, facing each other.
+3. Press **O** (or click "Find online duel") in each. The first player waits; the fight starts when the second joins. Fighters start 6 units apart, facing each other. Each fights with their own active deck.
+
+   Two tabs of the same browser share one account, and so one deck. To fight with two different decks on one machine, use a private window or a second browser for the other player.
 4. Press **O** again to return to training. That ends the fight for the other player too.
 
 The status line shows the connection state and how many ticks ahead your game is predicting. If your connection drops you have 20 seconds to come back and carry on; your character stands still meanwhile. A drop within the first 5 seconds of a fight cannot be recovered.
@@ -171,4 +196,4 @@ To feel how it plays on a poor connection, add `?latency=80` to the page address
 
 ## Not in the game yet
 
-Attack animations, rounds and winning, the deck editor, accounts, matchmaking, feints, manual stance changes, parry and other defensive styles, sound and effects, gamepad support.
+Attack animations, rounds and winning, matchmaking, match history, feints, manual stance changes, parry and other defensive styles, sound and effects, gamepad support.

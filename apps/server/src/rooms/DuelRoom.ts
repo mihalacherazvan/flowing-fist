@@ -1,6 +1,6 @@
-import { Room } from '@colyseus/core';
+import { Room, ServerError } from '@colyseus/core';
 import type { Client } from '@colyseus/core';
-import { DEFAULT_DECK } from '@flowing-fist/content';
+import type { CombatDeck } from '@flowing-fist/content';
 import { DuelAuthority } from '@flowing-fist/netcode';
 import { MessageType, PROTOCOL_VERSION } from '@flowing-fist/protocol';
 import type {
@@ -11,17 +11,29 @@ import type {
     StartMessage
 } from '@flowing-fist/protocol';
 import { FixedTimestep, TICK_MS } from '@flowing-fist/sim';
+import { findUser } from '../accounts/accounts';
+import { verifyToken } from '../auth/tokens';
+import type { Database } from '../db/database';
+import { getFightingDeck } from '../decks/decks';
 
 const PLAYER_COUNT = 2;
 const RECONNECTION_SECONDS = 20;
-// Everyone plays the default deck until decks can be saved and chosen
-const DECKS = [DEFAULT_DECK, DEFAULT_DECK];
+
+/** What a client is known to be once its token has been checked */
+export interface DuelPlayer {
+    userId: string;
+    displayName: string;
+    deck: CombatDeck;
+}
 
 /**
  * One 1v1 fight. The room owns the authoritative simulation; clients only
  * send input and are told what the server did with it.
  */
 export class DuelRoom extends Room {
+    /** Set once at start-up; rooms are created by Colyseus, so it cannot be passed in */
+    public static db: Database;
+
     public maxClients = PLAYER_COUNT;
 
     private authority?: DuelAuthority;
@@ -29,6 +41,26 @@ export class DuelRoom extends Room {
     private lastUpdateAt: number = performance.now();
     /** Session id to character slot */
     private slots: Map<string, number> = new Map();
+    /** Who fights in each slot; kept after the fight starts, for players who rejoin */
+    private players: DuelPlayer[] = [];
+
+    /**
+     * Runs before a client is let in. The deck comes from the database, never
+     * from the client, and is checked against the deck rules once more.
+     *
+     * @returns the player, which Colyseus hands to onJoin as client.auth
+     */
+    public static async onAuth(token: string): Promise<DuelPlayer> {
+        const userId = token ? await verifyToken(token) : null;
+        const user = userId ? await findUser(DuelRoom.db, userId) : null;
+        if (!user) throw new ServerError(401, 'Sign in to fight online');
+
+        try {
+            return { userId: user.id, displayName: user.displayName, deck: await getFightingDeck(DuelRoom.db, user.id) };
+        } catch (error) {
+            throw new ServerError(422, (error as Error).message);
+        }
+    }
 
     public onCreate(): void {
         // The fight is synchronised through messages, not through room state
@@ -57,9 +89,10 @@ export class DuelRoom extends Room {
         if (slot === undefined) throw new Error('Room is full');
 
         this.slots.set(client.sessionId, slot);
+        this.players[slot] = client.auth as DuelPlayer;
 
         if (this.slots.size === PLAYER_COUNT && !this.authority) {
-            this.authority = new DuelAuthority(DECKS);
+            this.authority = new DuelAuthority(this.players.map((player) => player.deck));
             this.lock();
             this.clients.forEach((roomClient) => this.sendStart(roomClient));
         }
@@ -118,7 +151,8 @@ export class DuelRoom extends Room {
         const message: StartMessage = {
             protocolVersion: PROTOCOL_VERSION,
             slot,
-            decks: DECKS,
+            decks: this.players.map((player) => player.deck),
+            names: this.players.map((player) => player.displayName),
             snapshot: this.authority.getSnapshot()
         };
         client.send(MessageType.Start, message);
