@@ -3,24 +3,23 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+  "engines": {
+    "node": ">=22"
   },
-  "dependencies": {
-    "@babylonjs/core": "^8.1.1",
-    "@babylonjs/gui": "^8.1.1",
-    "@babylonjs/inspector": "^8.1.1",
-    "@babylonjs/loaders": "^8.1.1",
-    "babylonjs-materials": "^8.1.1"
+  "scripts": {
+    "dev": "pnpm --filter @flowing-fist/client dev",
+    "build": "pnpm --filter @flowing-fist/client build",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r run test",
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "assets": "pnpm --filter @flowing-fist/assets build",
+    "test:e2e": "pnpm --filter @flowing-fist/client test:e2e"
   },
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
     "eslint": "^8.56.0",
-    "typescript": "^5.3.3",
-    "vite": "^5.1.4"
-  }
+    "typescript": "^5.3.3"
+  },
+  "packageManager": "pnpm@11.2.2"
 }

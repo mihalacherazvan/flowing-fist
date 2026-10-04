@@ -1,28 +1,33 @@
-import { 
-    Scene, 
-    Vector3, 
-    HemisphericLight, 
-    MeshBuilder, 
-    StandardMaterial, 
-    Color3, 
-    DirectionalLight,
-    Texture,
-} from '@babylonjs/core';
+import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight';
+import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight';
+import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
+import { Texture } from '@babylonjs/core/Materials/Textures/texture';
+import { Color3 } from '@babylonjs/core/Maths/math.color';
+import { Vector3 } from '@babylonjs/core/Maths/math.vector';
+import { CreateBox } from '@babylonjs/core/Meshes/Builders/boxBuilder';
+import { CreateGround } from '@babylonjs/core/Meshes/Builders/groundBuilder';
+import { Scene } from '@babylonjs/core/scene';
 import { SkyMaterial } from '@babylonjs/materials/sky';
-import type { Scene as SceneType } from '@babylonjs/core/scene';
 import type { Engine as EngineType } from '@babylonjs/core/Engines/engine';
 import type { Mesh as MeshType } from '@babylonjs/core/Meshes/mesh';
-import { Player } from '../characters/Player';
+import { TRAINING_ARENA } from '@flowing-fist/content';
+import { FixedTimestep, PI, cloneWorld, createCharacter, createWorld, stepWorld } from '@flowing-fist/sim';
+import type { WorldState } from '@flowing-fist/sim';
+import { CameraRig } from '../camera/CameraRig';
+import { CharacterView } from '../characters/CharacterView';
 import { InputController } from '../utils/InputController';
 
-// Import SceneLoader loaders
-import '@babylonjs/loaders/glTF';
+const PLAYER_INDEX = 0;
 
 export class GameScene {
-    private scene: SceneType;
-    private player: Player;
+    private scene: Scene;
     private ground!: MeshType;
     private input: InputController;
+    private timestep: FixedTimestep = new FixedTimestep();
+    private world: WorldState;
+    private previousWorld: WorldState;
+    private characterViews: CharacterView[];
+    private cameraRig: CameraRig;
 
     constructor(private engine: EngineType, private canvas: HTMLCanvasElement) {
         // Create the scene
@@ -34,12 +39,23 @@ export class GameScene {
         // Setup environment
         this.setupEnvironment();
 
-        // Create player
-        this.player = new Player(this.scene, this.input, new Vector3(0, 1, 0));
+        // Create the simulated world: the player and a training dummy facing each other
+        this.world = createWorld(TRAINING_ARENA.radius, [
+            createCharacter(0, 0, 0),
+            createCharacter(0, 5, PI)
+        ]);
+        this.previousWorld = cloneWorld(this.world);
+
+        // Create a view per character and the camera that follows the player
+        this.characterViews = [
+            new CharacterView(this.scene, 'player'),
+            new CharacterView(this.scene, 'dummy')
+        ];
+        this.cameraRig = new CameraRig(this.scene, this.input, new Vector3(0, 1, 0));
 
         // Register render loop
         this.engine.runRenderLoop(() => {
-            this.update();
+            this.update(this.engine.getDeltaTime());
             this.scene.render();
         });
 
@@ -65,7 +81,7 @@ export class GameScene {
      */
     private setupGround(): void {
         // Create a large flat ground
-        this.ground = MeshBuilder.CreateGround(
+        this.ground = CreateGround(
             'ground',
             { width: 100, height: 100, subdivisions: 16 },
             this.scene
@@ -74,7 +90,7 @@ export class GameScene {
         const groundMaterial = new StandardMaterial('groundMaterial', this.scene);
 
         // Create ground texture
-        const groundTexture = new Texture("textures/ground.jpg", this.scene);
+        const groundTexture = new Texture('textures/ground.jpg', this.scene);
         groundTexture.uScale = 10;
         groundTexture.vScale = 10;
 
@@ -120,10 +136,10 @@ export class GameScene {
         dirLight.diffuse = new Color3(1, 0.95, 0.8); // Slightly warm sunlight
 
         // Create a skybox mesh
-        const skybox = MeshBuilder.CreateBox("skyBox", { size: 1000.0 }, this.scene);
+        const skybox = CreateBox('skyBox', { size: 1000.0 }, this.scene);
 
         // Create a sky material
-        const skyMaterial = new SkyMaterial("skyMaterial", this.scene);
+        const skyMaterial = new SkyMaterial('skyMaterial', this.scene);
         skyMaterial.backFaceCulling = false;
 
         // Set sky properties
@@ -143,17 +159,38 @@ export class GameScene {
     }
 
     /**
-     * Update game logic
+     * Run the simulation at its fixed tick rate, then draw the result
      */
-    private update(): void {
-        // Update player
-        this.player.update();
+    private update(elapsedMs: number): void {
+        const ticks = this.timestep.advance(elapsedMs);
+
+        for (let i = 0; i < ticks; i++) {
+            this.previousWorld = cloneWorld(this.world);
+            stepWorld(this.world, [this.input.sampleInputFrame(this.cameraRig.getYaw())]);
+        }
+
+        // Blend between the last two ticks so rendering stays smooth at any frame rate
+        const alpha = this.timestep.getAlpha();
+        this.characterViews.forEach((view, index) => {
+            view.update(this.previousWorld.characters[index], this.world.characters[index], alpha);
+        });
+
+        const playerView = this.characterViews[PLAYER_INDEX];
+        const isLockedOn = this.world.characters[PLAYER_INDEX].lockedOn;
+        this.cameraRig.update(playerView.getPosition(), isLockedOn ? playerView.getYaw() : null);
+    }
+
+    /**
+     * Get the simulated world (read-only use: debugging and tests)
+     */
+    public getWorld(): WorldState {
+        return this.world;
     }
 
     /**
      * Get the Babylon.js scene
      */
-    public getScene(): SceneType {
+    public getScene(): Scene {
         return this.scene;
     }
 }

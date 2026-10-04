@@ -1,0 +1,13 @@
+{
+  "name": "@flowing-fist/assets",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "node strip-animation-meshes.mjs"
+  },
+  "dependencies": {
+    "@gltf-transform/core": "^4.5.1",
+    "@gltf-transform/functions": "^4.5.1"
+  }
+}

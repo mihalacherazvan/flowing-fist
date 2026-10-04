@@ -50,5 +50,9 @@ desktop.ini
 # pnpm-lock.yaml
 
 # Generated files
-public/models/*
-!public/models/.gitkeep
+apps/client/public/models/*
+!apps/client/public/models/.gitkeep
+
+# Playwright
+test-results/
+playwright-report/

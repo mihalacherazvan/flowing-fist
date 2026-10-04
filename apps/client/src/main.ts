@@ -1,13 +1,10 @@
-import { Engine } from '@babylonjs/core';
-import type { Engine as EngineType } from '@babylonjs/core/Engines/engine';
-import '@babylonjs/core/Debug/debugLayer';
-import '@babylonjs/inspector';
+import { Engine } from '@babylonjs/core/Engines/engine';
 import { GameScene } from './game/scenes/GameScene';
 import './style.css';
 
 class Game {
     private canvas: HTMLCanvasElement;
-    private engine: EngineType;
+    private engine: Engine;
     private gameScene: GameScene;
     private loadingScreen: HTMLElement | null;
 
@@ -32,8 +29,13 @@ class Game {
         // Hide loading screen once everything is loaded
         this.hideLoadingScreen();
         
-        // Add debug inspector (press Ctrl+Shift+I to toggle)
+        // Add debug inspector (press backtick to toggle)
         this.setupDebugLayer();
+
+        // Let browser tests read the simulation state
+        if (import.meta.env.DEV) {
+            (window as Window & { flowingFist?: GameScene }).flowingFist = this.gameScene;
+        }
     }
 
     /**
@@ -49,16 +51,22 @@ class Game {
      * Setup the Babylon.js debug inspector
      */
     private setupDebugLayer(): void {
-        // Add keyboard shortcut to show/hide inspector (Ctrl+Shift+I)
-        window.addEventListener('keydown', (event) => {
-            if (event.key === '`') {
-                if (this.gameScene.getScene().debugLayer.isVisible()) {
-                    this.gameScene.getScene().debugLayer.hide();
-                } else {
-                    this.gameScene.getScene().debugLayer.show();
+        // The inspector is large, so it is only loaded on demand in dev builds
+        if (import.meta.env.DEV) {
+            // Add keyboard shortcut to show/hide inspector (backtick)
+            window.addEventListener('keydown', async (event) => {
+                if (event.key === '`') {
+                    await import('@babylonjs/core/Debug/debugLayer');
+                    await import('@babylonjs/inspector');
+
+                    if (this.gameScene.getScene().debugLayer.isVisible()) {
+                        this.gameScene.getScene().debugLayer.hide();
+                    } else {
+                        this.gameScene.getScene().debugLayer.show();
+                    }
                 }
-            }
-        });
+            });
+        }
     }
 }
 

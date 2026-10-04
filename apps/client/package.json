@@ -1,0 +1,28 @@
+{
+  "name": "@flowing-fist/client",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test:e2e": "playwright test"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^9.29.0",
+    "@babylonjs/gui": "^9.29.0",
+    "@babylonjs/inspector": "^9.29.0",
+    "@babylonjs/loaders": "^9.29.0",
+    "@babylonjs/materials": "^9.29.0",
+    "@flowing-fist/content": "workspace:*",
+    "@flowing-fist/protocol": "workspace:*",
+    "@flowing-fist/sim": "workspace:*"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "typescript": "^5.3.3",
+    "vite": "^8.3.2"
+  }
+}
