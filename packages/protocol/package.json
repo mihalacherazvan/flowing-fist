@@ -11,5 +11,9 @@
   },
   "devDependencies": {
     "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "@flowing-fist/content": "workspace:*",
+    "@flowing-fist/sim": "workspace:*"
   }
 }

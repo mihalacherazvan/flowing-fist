@@ -12,9 +12,15 @@ export interface HudCharacter {
 }
 
 export interface HudState {
+    mode: 'training' | 'duel';
     characters: HudCharacter[];
-    dummyMode: string;
-    paused: boolean;
+    /** One line describing the session, e.g. the dummy mode or the connection state */
+    statusLine: string;
+}
+
+export interface HudActions {
+    startTraining(): void;
+    startDuel(): void;
 }
 
 type Listener = () => void;
@@ -24,9 +30,12 @@ type Listener = () => void;
  * here and the UI subscribes to it. The UI never touches Babylon or the sim.
  */
 class HudStore {
-    private state: HudState = { characters: [], dummyMode: '', paused: false };
+    private state: HudState = { mode: 'training', characters: [], statusLine: '' };
     private serialisedState: string = '';
     private listeners: Set<Listener> = new Set();
+
+    /** What the UI can ask the game to do; set by the game on start-up */
+    public actions: HudActions = { startTraining: () => undefined, startDuel: () => undefined };
 
     public subscribe = (listener: Listener): (() => void) => {
         this.listeners.add(listener);

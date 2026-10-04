@@ -1,7 +1,7 @@
 export { TICK_RATE, TICK_MS, FixedTimestep } from './FixedTimestep';
 export { getCurrentMove, getHitboxPosition, getMovePhase } from './combat';
 export type { MovePhase } from './combat';
-export { Button, EMPTY_INPUT, encodeInput, inputYawToRadians } from './input';
+export { Button, EMPTY_INPUT, encodeInput, inputYawToRadians, sanitiseInput } from './input';
 export type { InputFrame } from './input';
 export { PI, TAU, atan2, cos, sin, wrapAngle } from './math';
 export { QueuedAttack, StunKind, cloneWorld, compileDeck, createCharacter, createWorld, hashWorld } from './state';

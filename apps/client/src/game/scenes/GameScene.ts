@@ -10,43 +10,28 @@ import { Scene } from '@babylonjs/core/scene';
 import { SkyMaterial } from '@babylonjs/materials/sky';
 import type { Engine as EngineType } from '@babylonjs/core/Engines/engine';
 import type { Mesh as MeshType } from '@babylonjs/core/Meshes/mesh';
-import { DEFAULT_DECK, STANCES, TRAINING_ARENA } from '@flowing-fist/content';
-import {
-    FixedTimestep,
-    PI,
-    StunKind,
-    cloneWorld,
-    createCharacter,
-    createWorld,
-    getCurrentMove,
-    getMovePhase,
-    stepWorld,
-    tuning
-} from '@flowing-fist/sim';
+import { STANCES } from '@flowing-fist/content';
+import { StunKind, getCurrentMove, getMovePhase, tuning } from '@flowing-fist/sim';
 import type { CharacterState, WorldState } from '@flowing-fist/sim';
 import { hudStore } from '../../ui/hudStore';
 import { CameraRig } from '../camera/CameraRig';
 import { CharacterView } from '../characters/CharacterView';
 import { CombatDebugOverlay } from '../debug/CombatDebugOverlay';
-import { TrainingDummy } from '../training/TrainingDummy';
+import { DuelSession } from '../sessions/DuelSession';
+import type { GameSession } from '../sessions/GameSession';
+import { TrainingSession } from '../sessions/TrainingSession';
 import { InputController } from '../utils/InputController';
 
-const PLAYER_INDEX = 0;
-const CHARACTER_NAMES = ['Player', 'Dummy'];
+const CHARACTER_COUNT = 2;
 
 export class GameScene {
     private scene: Scene;
     private ground!: MeshType;
     private input: InputController;
-    private timestep: FixedTimestep = new FixedTimestep();
-    private world: WorldState;
-    private previousWorld: WorldState;
+    private session: GameSession = new TrainingSession();
     private characterViews: CharacterView[];
     private cameraRig: CameraRig;
     private debugOverlay: CombatDebugOverlay;
-    private dummy: TrainingDummy = new TrainingDummy();
-    private paused: boolean = false;
-    private stepRequested: boolean = false;
 
     constructor(private engine: EngineType, private canvas: HTMLCanvasElement) {
         // Create the scene
@@ -58,22 +43,15 @@ export class GameScene {
         // Setup environment
         this.setupEnvironment();
 
-        // Create the simulated world: the player and a training dummy facing each other
-        this.world = createWorld(TRAINING_ARENA.radius, [
-            createCharacter(0, 0, 0),
-            createCharacter(0, 5, PI)
-        ], [DEFAULT_DECK, DEFAULT_DECK]);
-        this.previousWorld = cloneWorld(this.world);
-
-        // Create a view per character and the camera that follows the player
+        // Create a view per character and the camera that follows the local player
         this.characterViews = [
-            new CharacterView(this.scene, 'player'),
-            new CharacterView(this.scene, 'dummy')
+            new CharacterView(this.scene, 'first'),
+            new CharacterView(this.scene, 'second')
         ];
         this.cameraRig = new CameraRig(this.scene, this.input, new Vector3(0, 1, 0));
-        this.debugOverlay = new CombatDebugOverlay(this.scene, this.world.characters.length);
+        this.debugOverlay = new CombatDebugOverlay(this.scene, CHARACTER_COUNT);
 
-        this.setupTrainingControls();
+        this.setupSessionControls();
 
         // Register render loop
         this.engine.runRenderLoop(() => {
@@ -181,55 +159,58 @@ export class GameScene {
     }
 
     /**
-     * Keyboard controls that belong to training mode rather than to the fight
+     * Switching between training and an online duel, from the keyboard or the HUD
      */
-    private setupTrainingControls(): void {
+    private setupSessionControls(): void {
+        hudStore.actions = {
+            startTraining: () => this.startSession(new TrainingSession()),
+            startDuel: () => this.startSession(new DuelSession())
+        };
+
         window.addEventListener('keydown', (event) => {
-            if (event.code === 'KeyG') this.dummy.cycleMode();
             if (event.code === 'KeyH') this.debugOverlay.toggle();
-            if (event.code === 'KeyP') this.paused = !this.paused;
-            if (event.code === 'Period') this.stepRequested = true;
+            if (event.code === 'KeyO') {
+                this.startSession(this.session.mode === 'training' ? new DuelSession() : new TrainingSession());
+            }
         });
+    }
+
+    private startSession(session: GameSession): void {
+        this.session.dispose();
+        this.session = session;
     }
 
     /**
-     * Run the simulation at its fixed tick rate, then draw the result
+     * Advance the session, then draw the world it produced
      */
     private update(elapsedMs: number): void {
-        let ticks = this.timestep.advance(elapsedMs);
+        this.session.update(elapsedMs, () => this.input.sampleInputFrame(this.cameraRig.getYaw()));
 
-        // While paused the simulation only moves when asked to, one tick at a time
-        if (this.paused) {
-            ticks = this.stepRequested ? 1 : 0;
-        }
-        this.stepRequested = false;
-
-        for (let i = 0; i < ticks; i++) {
-            this.previousWorld = cloneWorld(this.world);
-            stepWorld(this.world, [
-                this.input.sampleInputFrame(this.cameraRig.getYaw()),
-                this.dummy.sampleInputFrame()
-            ]);
-        }
+        const world = this.session.getWorld();
+        const previousWorld = this.session.getPreviousWorld();
 
         // Blend between the last two ticks so rendering stays smooth at any frame rate
-        const alpha = this.paused ? 1 : this.timestep.getAlpha();
+        const alpha = this.session.getAlpha();
         this.characterViews.forEach((view, index) => {
-            view.update(this.previousWorld.characters[index], this.world.characters[index], alpha);
+            view.update(previousWorld.characters[index], world.characters[index], alpha);
         });
-        this.debugOverlay.update(this.world);
+        this.debugOverlay.update(world);
 
-        const playerView = this.characterViews[PLAYER_INDEX];
-        const isLockedOn = this.world.characters[PLAYER_INDEX].lockedOn;
+        const playerIndex = this.session.getLocalPlayerIndex();
+        const playerView = this.characterViews[playerIndex];
+        const isLockedOn = world.characters[playerIndex].lockedOn;
         this.cameraRig.update(playerView.getPosition(), isLockedOn ? playerView.getYaw() : null);
 
-        this.publishHud();
+        this.publishHud(world);
     }
 
-    private publishHud(): void {
+    private publishHud(world: WorldState): void {
+        const names = this.session.getCharacterNames();
+
         hudStore.publish({
-            characters: this.world.characters.map((character, index) => ({
-                name: CHARACTER_NAMES[index],
+            mode: this.session.mode,
+            characters: world.characters.map((character, index) => ({
+                name: names[index],
                 health: character.health,
                 maxHealth: tuning.MAX_HEALTH,
                 stamina: character.stamina,
@@ -237,8 +218,7 @@ export class GameScene {
                 stance: STANCES[character.stance],
                 status: GameScene.describeStatus(character)
             })),
-            dummyMode: this.dummy.getMode(),
-            paused: this.paused
+            statusLine: this.session.getStatusLine()
         });
     }
 
@@ -260,7 +240,14 @@ export class GameScene {
      * Get the simulated world (read-only use: debugging and tests)
      */
     public getWorld(): WorldState {
-        return this.world;
+        return this.session.getWorld();
+    }
+
+    /**
+     * Get the index of the character the local player controls
+     */
+    public getLocalPlayerIndex(): number {
+        return this.session.getLocalPlayerIndex();
     }
 
     /**

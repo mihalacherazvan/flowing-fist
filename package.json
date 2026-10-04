@@ -7,7 +7,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "pnpm --filter @flowing-fist/client dev",
+    "client": "pnpm --filter @flowing-fist/client dev",
+    "server": "pnpm --filter @flowing-fist/server dev",
     "build": "pnpm --filter @flowing-fist/client build",
     "typecheck": "pnpm -r run typecheck",
     "test": "pnpm -r run test",

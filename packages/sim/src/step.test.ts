@@ -127,7 +127,8 @@ describe('stepWorld lock-on', () => {
         stepWorld(world, [encodeInput(Button.LockOn, 0, 0, 0)]);
         expect(player.lockedOn).toBe(true);
 
-        run(world, TICK_RATE - 1, encodeInput(Button.LockOn, 1, 0, 0));
+        // Half a second: the camera is fixed here, so a longer strafe would curve away from sideways
+        run(world, TICK_RATE / 2 - 1, encodeInput(Button.LockOn, 1, 0, 0));
         // Facing is taken from where the character stands at the start of the tick
         const expectedYaw = Math.atan2(dummy.x - player.x, dummy.z - player.z);
         run(world, 1, encodeInput(Button.LockOn, 1, 0, 0));

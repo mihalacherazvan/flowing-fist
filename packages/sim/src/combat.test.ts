@@ -12,6 +12,7 @@ import {
     BLOCK_PUSHBACK,
     DODGE_STAMINA_COST,
     GUARD_BREAK_STUN_TICKS,
+    GUARD_MOVE_SPEED,
     HIT_PUSHBACK,
     KNOCKOUT_TICKS,
     MAX_HEALTH,
@@ -284,7 +285,7 @@ describe('guard', () => {
 
         expect(attacker.guarding).toBe(true);
         expect(attacker.running).toBe(false);
-        expect(attacker.x).toBeCloseTo(1.5, 3);
+        expect(attacker.x).toBeCloseTo(GUARD_MOVE_SPEED, 3);
         expect(attacker.stamina).toBe(50);
     });
 });

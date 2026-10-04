@@ -117,3 +117,16 @@ html, body {
   line-height: 1.5;
   opacity: 0.85;
 }
+
+.hud-button {
+  margin-top: 6px;
+  padding: 4px 10px;
+  pointer-events: auto;
+  cursor: pointer;
+  font: inherit;
+  color: white;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.hud-button:hover { background: rgba(0, 0, 0, 0.8); }

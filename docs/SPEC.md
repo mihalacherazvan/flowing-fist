@@ -43,7 +43,8 @@ flowing-fist/                  (git root; client history moved up and preserved)
   apps/server/                 Colyseus + HTTP API
   packages/sim/                deterministic combat simulation, math, input encoding
   packages/content/            move definitions, deck rules, arena definitions (data + validators)
-  packages/protocol/           message types, Colyseus schemas for room metadata
+  packages/protocol/           message types shared by client and server
+  packages/netcode/            server authority and client prediction, free of Colyseus and Babylon
   tools/                       asset pipeline, move viewer/hitbox editor
   docs/SPEC.md                 this document
 ```

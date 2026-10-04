@@ -1,0 +1,23 @@
+{
+  "name": "@flowing-fist/netcode",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@flowing-fist/content": "workspace:*",
+    "@flowing-fist/protocol": "workspace:*",
+    "@flowing-fist/sim": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3",
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
+  }
+}

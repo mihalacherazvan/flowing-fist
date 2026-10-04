@@ -1,8 +1,8 @@
 // Speeds are in units per second, durations in ticks.
 // Combat values are placeholders to be tuned once real animations exist.
-export const WALK_SPEED = 3;
-export const RUN_SPEED = 6;
-export const GUARD_MOVE_SPEED = 1.5;
+export const WALK_SPEED = 6;
+export const RUN_SPEED = 12;
+export const GUARD_MOVE_SPEED = 3;
 export const DODGE_SPEED = 12;
 export const DODGE_TICKS = 30;
 export const DODGE_COOLDOWN_TICKS = 60;

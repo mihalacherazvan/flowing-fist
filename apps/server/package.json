@@ -1,0 +1,24 @@
+{
+  "name": "@flowing-fist/server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@colyseus/core": "^0.18.18",
+    "@colyseus/ws-transport": "^0.18.4",
+    "@flowing-fist/content": "workspace:*",
+    "@flowing-fist/netcode": "workspace:*",
+    "@flowing-fist/protocol": "workspace:*",
+    "@flowing-fist/sim": "workspace:*"
+  }
+}

@@ -93,7 +93,7 @@ test('training mode: hit the dummy, then have it block', async ({ page }) => {
 
     await page.keyboard.press('KeyJ');
     await expect.poll(async () => (await getCharacters(page))[1].health).toBeLessThan(100);
-    await expect(page.getByTestId('hud-dummy')).toContainText('Hit');
+    await expect(page.getByTestId('hud-right')).toContainText('Hit');
 
     // Let the jab finish, then switch the dummy to guarding
     await expect.poll(async () => (await getCharacters(page))[0].moveIndex).toBe(-1);

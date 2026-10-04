@@ -47,6 +47,26 @@ export function encodeInput(buttons: number, moveRight: number, moveForward: num
     };
 }
 
+const ALL_BUTTONS = Object.values(Button).reduce((mask, button) => mask | button, 0);
+
+/**
+ * Force anything received from the network into a valid InputFrame
+ */
+export function sanitiseInput(input: Partial<InputFrame> | null | undefined): InputFrame {
+    const toInteger = (value: unknown, minimum: number, maximum: number): number => {
+        const number = Number.isFinite(value) ? Math.trunc(value as number) : 0;
+
+        return Math.max(minimum, Math.min(maximum, number));
+    };
+
+    return {
+        buttons: toInteger(input?.buttons, 0, ALL_BUTTONS) & ALL_BUTTONS,
+        moveX: toInteger(input?.moveX, -MOVE_AXIS_MAX, MOVE_AXIS_MAX),
+        moveY: toInteger(input?.moveY, -MOVE_AXIS_MAX, MOVE_AXIS_MAX),
+        yaw: toInteger(input?.yaw, 0, YAW_STEPS - 1)
+    };
+}
+
 export function inputYawToRadians(yaw: number): number {
     return yaw * (TAU / YAW_STEPS);
 }
