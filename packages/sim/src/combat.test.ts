@@ -11,12 +11,17 @@ import { stepWorld } from './step';
 import {
     BLOCK_PUSHBACK,
     DODGE_STAMINA_COST,
+    FEINT_STAMINA_COST,
     GUARD_BREAK_STUN_TICKS,
     GUARD_MOVE_SPEED,
     HIT_PUSHBACK,
     KNOCKOUT_TICKS,
     MAX_HEALTH,
     MAX_STAMINA,
+    PARRY_STAMINA_COST,
+    PARRY_STUN_TICKS,
+    PARRY_TICKS,
+    PARRY_WINDOW_TICKS,
     STAMINA_REGEN_DELAY_TICKS
 } from './tuning';
 
@@ -24,6 +29,7 @@ const NO_INPUT = encodeInput(0, 0, 0, 0);
 const ATTACK = encodeInput(Button.Attack, 0, 0, 0);
 const ALTERNATE = encodeInput(Button.Alternate, 0, 0, 0);
 const GUARD = encodeInput(Button.Guard, 0, 0, 0);
+const PARRY = encodeInput(Button.Parry, 0, 0, 0);
 
 function move(id: string): MoveDefinition {
     const definition = getMove(id);
@@ -305,5 +311,90 @@ describe('stamina', () => {
 
         run(world, 600, NO_INPUT);
         expect(attacker.stamina).toBe(MAX_STAMINA);
+    });
+});
+
+describe('feint', () => {
+    it('calls off an attack when guard is pressed during its startup', () => {
+        const { world, attacker, defender } = createFight(2);
+        const jab = move('jab');
+
+        stepWorld(world, [ATTACK]);
+        run(world, 3, NO_INPUT);
+        stepWorld(world, [GUARD]);
+
+        expect(getCurrentMove(attacker)).toBeNull();
+        expect(attacker.stamina).toBe(MAX_STAMINA - jab.staminaCost - FEINT_STAMINA_COST);
+        // The attack never finished, so the stance is the one it started in
+        expect(STANCES[attacker.stance]).toBe(jab.startStance);
+
+        run(world, totalTicks('jab'), GUARD);
+        expect(defender.health).toBe(MAX_HEALTH);
+        expect(attacker.guarding).toBe(true);
+    });
+
+    it('is too late once the attack is active, and needs guard to be pressed, not held', () => {
+        const late = createFight(20);
+        stepWorld(late.world, [ATTACK]);
+        run(late.world, move('jab').startupTicks, NO_INPUT);
+        stepWorld(late.world, [GUARD]);
+        expect(getCurrentMove(late.attacker)).toBe(move('jab'));
+
+        const held = createFight(20);
+        run(held.world, 5, GUARD);
+        run(held.world, 5, encodeInput(Button.Guard | Button.Attack, 0, 0, 0));
+        expect(getCurrentMove(held.attacker)).toBe(move('jab'));
+    });
+});
+
+describe('parry', () => {
+    it('turns aside an attack that lands in its opening ticks and stuns the attacker', () => {
+        const { world, attacker, defender } = createFight(2);
+        const jab = move('jab');
+
+        // The jab connects on the tick after its startup, so the parry starts just before
+        stepWorld(world, [ATTACK]);
+        run(world, jab.startupTicks - 2, NO_INPUT);
+        stepWorld(world, [NO_INPUT, PARRY]);
+        expect(defender.parryTicks).toBe(PARRY_TICKS - 1);
+        expect(defender.stamina).toBe(MAX_STAMINA - PARRY_STAMINA_COST);
+
+        run(world, 2, NO_INPUT);
+        expect(defender.health).toBe(MAX_HEALTH);
+        expect(defender.parryTicks).toBe(0);
+        expect(getCurrentMove(attacker)).toBeNull();
+        expect(attacker.stunKind).toBe(StunKind.Parried);
+        expect(attacker.stunTicks).toBeGreaterThan(PARRY_STUN_TICKS - 3);
+        // The stunned attacker's presses do nothing
+        run(world, 10, ATTACK);
+        expect(getCurrentMove(attacker)).toBeNull();
+    });
+
+    it('fails when started too early, and holds the character in place meanwhile', () => {
+        const { world, attacker, defender } = createFight(2);
+        const jab = move('jab');
+
+        stepWorld(world, [NO_INPUT, PARRY]);
+        run(world, PARRY_WINDOW_TICKS, NO_INPUT, encodeInput(Button.Attack, 1, 0, 0));
+        expect(getCurrentMove(defender)).toBeNull();
+        expect(defender.x).toBe(0);
+
+        stepWorld(world, [ATTACK]);
+        run(world, jab.startupTicks + 1, NO_INPUT);
+        expect(defender.health).toBe(MAX_HEALTH - jab.damage);
+        expect(defender.parryTicks).toBe(0);
+        expect(attacker.stunKind).toBe(StunKind.None);
+    });
+
+    it('does not cover the back', () => {
+        const { world, defender } = createFight(2);
+        defender.yaw = 0;
+
+        stepWorld(world, [ATTACK]);
+        run(world, move('jab').startupTicks - 2, NO_INPUT);
+        stepWorld(world, [NO_INPUT, PARRY]);
+        run(world, 2, NO_INPUT);
+
+        expect(defender.health).toBe(MAX_HEALTH - move('jab').damage);
     });
 });

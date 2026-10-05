@@ -11,6 +11,9 @@ import {
     GUARD_BREAK_STUN_TICKS,
     HIT_PUSHBACK,
     KNOCKOUT_TICKS,
+    PARRY_STUN_TICKS,
+    PARRY_TICKS,
+    PARRY_WINDOW_TICKS,
     STAMINA_REGEN_DELAY_TICKS
 } from './tuning';
 
@@ -180,8 +183,15 @@ function applyHit(attacker: CharacterState, defender: CharacterState, move: Move
     const toAttackerZ = attacker.z - defender.z;
     const isFromFront = toAttackerX * sin(defender.yaw) + toAttackerZ * cos(defender.yaw) > 0;
     const isGuarded = defender.guarding && isFromFront;
+    // Like a guard, a parry only works to the front, and only in its opening ticks
+    const isParried = isFromFront && defender.parryTicks > PARRY_TICKS - PARRY_WINDOW_TICKS;
 
-    if (isGuarded && move.guardBreak) {
+    if (isParried) {
+        defender.parryTicks = 0;
+        resetChain(attacker);
+        attacker.stunKind = StunKind.Parried;
+        attacker.stunTicks = PARRY_STUN_TICKS;
+    } else if (isGuarded && move.guardBreak) {
         breakGuard(defender);
     } else if (isGuarded) {
         spendStamina(defender, move.guardDamage);
@@ -196,6 +206,7 @@ function applyHit(attacker: CharacterState, defender: CharacterState, move: Move
         defender.health = Math.max(0, defender.health - move.damage);
         defender.guarding = false;
         defender.dodgeTicks = 0;
+        defender.parryTicks = 0;
         resetChain(defender);
         pushAway(attacker, defender, HIT_PUSHBACK);
 

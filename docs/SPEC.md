@@ -2,7 +2,7 @@
 
 ## Status
 
-_As of 2026-10-04:_ milestones **M0–M4 are done**; **M5 is next**. This document is the plan. What actually exists is described in [ARCHITECTURE.md](ARCHITECTURE.md), how the game plays in [GAMEPLAY.md](GAMEPLAY.md), and how models and animations are made in [ASSETS.md](ASSETS.md).
+_As of 2026-10-04:_ milestones **M0–M5 are done**; **M6 is next**. This document is the plan. What actually exists is described in [ARCHITECTURE.md](ARCHITECTURE.md), how the game plays in [GAMEPLAY.md](GAMEPLAY.md), and how models and animations are made in [ASSETS.md](ASSETS.md).
 
 ## Context
 
@@ -104,7 +104,7 @@ A dev-only **move viewer** page: scrub an animation clip frame by frame, place h
 3. **M2 Offline combat** (done, except the move viewer, which waits for attack animation clips) — stances, attacks, hit/guard/stamina, hitbox overlay, move viewer, 8–12 moves, training dummy.
 4. **M3 Networked duel** (done, except input delay and a Node-versus-browser determinism test) — `DuelRoom`, input relay, prediction and rollback, snapshots, latency simulation, reconnection.
 5. **M4 Decks and accounts** (done, except OAuth sign-in and the `user_moves` table, which waits for move learning) — auth, database, deck editor UI, server-side deck validation.
-6. **M5 Match flow** (next) — matchmaking, rounds, HUD, results, rating, parry style, feints.
+6. **M5 Match flow** (done, except queueing by region and ring-out; round score and timer live in the simulation instead of Colyseus Schema state) — matchmaking, rounds, HUD, results, rating, parry style, feints.
 7. **M6 Polish and launch** — VFX/SFX, second arena, more moves, gamepad, replays, deployment.
 
 **Later:** AI opponents and co-op zones, move learning, further defensive styles, weapons, WebTransport, multi-region.

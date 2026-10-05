@@ -2,7 +2,7 @@
 
 This document describes what each part of the codebase does **today**. It is a living document: update the relevant section in the same change that alters a component. For where the project is heading, see [SPEC.md](SPEC.md); for controls and combat rules, see [GAMEPLAY.md](GAMEPLAY.md).
 
-_Last updated: 2026-10-04, after milestone M4 (decks and accounts)._
+_Last updated: 2026-10-04, after milestone M5 (match flow)._
 
 ## The idea in one paragraph
 
@@ -12,7 +12,7 @@ A fight is a deterministic simulation that advances 60 times per second. It is w
 
 ```
 apps/client      the game in the browser: input, rendering, HUD
-apps/server      Colyseus server: one room per fight, plus the HTTP API for accounts and decks
+apps/server      Colyseus server: the matchmaking queue, one room per match, plus the HTTP API for accounts, decks and match history
 packages/sim     the fight simulation
 packages/content moves, decks, arenas (data and rules)
 packages/netcode server authority and client prediction
@@ -75,10 +75,11 @@ Takes a world state and one input per character, and produces the next world sta
 
 | File | Contents |
 |---|---|
-| `state.ts` | `CharacterState` and `WorldState` (plain numbers and booleans), `createWorld`, `cloneWorld`, `hashWorld`, deck compilation |
+| `state.ts` | `CharacterState`, `MatchState` and `WorldState` (plain numbers and booleans), `createWorld`, `cloneWorld`, `hashWorld`, deck compilation |
 | `input.ts` | `InputFrame` (button bitmask, quantised movement axes and camera yaw — all integers), `encodeInput`, `sanitiseInput` |
-| `step.ts` | `stepWorld`: one tick of locomotion, dodge, lock-on, guard, attack progression, character separation and arena bounds |
-| `combat.ts` | Starting and chaining attacks, hit detection, applying hits, guard and guard break, knockout |
+| `step.ts` | `stepWorld`: one tick of locomotion, dodge, lock-on, guard, parry, feint, attack progression, character separation and arena bounds |
+| `combat.ts` | Starting and chaining attacks, hit detection, applying hits, guard and guard break, parried attacks, knockout |
+| `match.ts` | Rounds: `createMatchWorld`, the countdown, the round clock, deciding a round and the match, resetting the fighters between rounds |
 | `math.ts` | Own `sin`, `cos`, `atan2` |
 | `tuning.ts` | Speeds, stamina, stun and timing constants |
 | `FixedTimestep.ts` | Turns variable frame time into whole ticks, with a leftover fraction for render interpolation |
@@ -87,13 +88,15 @@ Rules that keep it deterministic, and must be preserved:
 
 - No `Math.sin`/`cos`/`atan2` — they can differ between JavaScript engines. Use `math.ts`.
 - No randomness, no clock, no reads from outside the arguments.
-- All state lives in `WorldState`. `hashWorld` covers every `CharacterState` field automatically, so new state must go there to be included in desync checks.
+- All state lives in `WorldState`. `hashWorld` covers every `CharacterState` field automatically, so new state must go there to be included in desync checks. `MatchState` fields are listed by hand in `hashWorld`; a new one must be added there.
 
-How a tick works: each character first decides what to start (attack, dodge, guard), then plays one tick of whatever it is doing. Afterwards all hits are collected and applied together, so two characters striking on the same tick both get hit.
+How a tick works: each character first decides what to start (attack, parry, dodge, guard), then plays one tick of whatever it is doing. Afterwards all hits are collected and applied together, so two characters striking on the same tick both get hit. Last, the match advances.
+
+**Matches.** A world may carry a `MatchState` (`world.match`); training has none. It holds the phase (countdown, fighting, round over, match over), the ticks left in it, the round number and each character's rounds won. Because it is part of the world, it is predicted, hashed, snapshotted and corrected exactly like the fight, and the server and both clients cannot disagree about the score or the clock. Outside the fighting phase characters ignore everything but the lock-on toggle and no hits are resolved. In a match a knocked-out character stays down until the next round; without one it gets up after 2 seconds (the training rule). The spec proposed Colyseus Schema state for round score and timer; keeping them in the simulation replaced that.
 
 Conventions: yaw 0 faces +Z and positive turns towards +X; distances are world units; durations are ticks.
 
-**Current limits:** hit detection is on the ground plane only (attack height is recorded but unused); knockout is a training rule (down for 2 seconds, then full health); no feints, manual stance change or defensive styles yet.
+**Current limits:** hit detection is on the ground plane only (attack height is recorded but unused); the parry is the only defensive style and everyone has it; no manual stance change; no ring-out.
 
 ## packages/protocol — network messages
 
@@ -101,10 +104,12 @@ The message names and shapes exchanged between client and server, plus the room 
 
 | Message | Direction | Purpose |
 |---|---|---|
-| `start` | server → client | Fight started or rejoined: your slot, both decks, both display names, a full snapshot |
+| `start` | server → client | Match started or rejoined: your slot, both decks, display names and ratings, whether it is ranked or private, a full snapshot (which includes the rounds and score) |
 | `tick` | server → client | The inputs the server used for one tick, a hash of the result, and how early this client's input arrived |
 | `snapshot` | server → client | Full state, on request |
-| `opponent` | server → client | The other player dropped, reconnected or left |
+| `opponent` | server → client | The other player dropped or reconnected |
+| `result` | server → client | The match is over: winner, rounds won, whether it was played out or forfeited, and each player's rating before and after (ranked only) |
+| `matchFound` | server → client, in the matchmaking room | An opponent was found; carries the seat reservation for the duel room |
 | `input` | client → server | Input frames for one or more ticks |
 | `requestSnapshot` | client → server | Local state no longer matches |
 
@@ -114,7 +119,7 @@ Bump `PROTOCOL_VERSION` when a message changes shape; the client refuses to play
 
 The networking logic, written against plain objects so it can be tested without sockets.
 
-**`DuelAuthority` (server side).** Owns the real world. Stores incoming input by tick, and on each step picks every player's input, advances the simulation and returns one `tick` message per player. If no input arrived for a tick it repeats the player's last one; input that arrives late is applied on the next tick with its buttons kept, so a quick press is delayed rather than lost. Disconnected players stand still. All input is sanitised.
+**`DuelAuthority` (server side).** Owns the real world, created by `createMatchWorld`, so it plays a whole match; `isMatchOver` and `getMatch` tell the room when and how it ended. Stores incoming input by tick, and on each step picks every player's input, advances the simulation and returns one `tick` message per player. If no input arrived for a tick it repeats the player's last one; input that arrives late is applied on the next tick with its buttons kept, so a quick press is delayed rather than lost. Disconnected players stand still. All input is sanitised.
 
 **`PredictionClient` (client side).** Keeps the last state the server confirmed and the local inputs not yet confirmed. Each frame it rebuilds the present by replaying those inputs on top of the confirmed state, assuming the opponent keeps doing what they were last seen doing. It also:
 
@@ -128,11 +133,11 @@ The networking logic, written against plain objects so it can be tested without 
 
 ## apps/server — Colyseus server and HTTP API
 
-One Node process serves both the fights (WebSocket) and the accounts and decks (HTTP, under `/api`).
+One Node process serves both the matches (WebSocket) and the accounts, decks and match history (HTTP, under `/api`).
 
 | File | Contents |
 |---|---|
-| `src/index.ts` | Opens the database, creates the server, mounts the API and registers the duel room |
+| `src/index.ts` | Opens the database, creates the server, mounts the API and registers the duel and matchmaking rooms |
 | `src/config.ts` | Port, database URL, token secret and sign-in rate limit, read from the environment. Development defaults match `docker-compose.yml`; in production the database URL and secret must be set |
 | `src/db/schema.ts` | The tables, as Drizzle definitions |
 | `src/db/database.ts` | Connects, creates the database if it is missing, and applies pending migrations on start-up |
@@ -143,7 +148,12 @@ One Node process serves both the fights (WebSocket) and the accounts and decks (
 | `src/decks/decks.ts` | Deck list, create, change, delete, activate; `getFightingDeck` for the duel room |
 | `src/http/api.ts` | The routes: reads the token, calls the functions above, turns errors into JSON answers |
 | `src/http/rateLimit.ts` | Per-address request limit on the sign-in routes |
-| `src/rooms/DuelRoom.ts` | One fight: checks the player's token, assigns slots, starts when two players have joined, drives a `DuelAuthority` at 60 Hz, relays its messages, handles drop, reconnect and leave |
+| `src/matches/matches.ts` | `recordMatch` (stores a finished match and moves ratings, in one transaction), `getRating`, `getProfile`, `listMatches` |
+| `src/ratings/elo.ts` | The Elo formula (K = 32) |
+| `src/rooms/players.ts` | `authenticatePlayer`: token → account, fighting deck and rating; used by both rooms |
+| `src/rooms/matchmaking.ts` | `pairWaitingPlayers` (who fights whom, a pure function) and the match tickets |
+| `src/rooms/MatchmakingRoom.ts` | The ranked queue: holds waiting clients, pairs them once a second, creates a duel room per pair and sends each player a seat in it |
+| `src/rooms/DuelRoom.ts` | One match, ranked or private: assigns slots, starts when two players have joined, drives a `DuelAuthority` at 60 Hz, relays its messages, handles drop, reconnect and leave, and records the result |
 
 **Tables**
 
@@ -151,6 +161,9 @@ One Node process serves both the fights (WebSocket) and the accounts and decks (
 |---|---|
 | `users` | Id (UUID), display name, email and password hash (both empty for a guest) |
 | `decks` | Id (UUID), owner, name, the deck as JSON, and whether it is the owner's active deck |
+| `ratings` | Per account: rating and ranked games, wins, losses, draws. A row appears with the first ranked match; without one the rating is 1000 |
+| `matches` | One finished match: ranked or private, played out or forfeited, rounds, length in ticks, when it ended |
+| `match_players` | Per match and slot: the account, the name it fought under, rounds won, outcome, rating before and after (empty for private) |
 
 **HTTP API** — JSON in and out; everything except the three `auth` routes needs `Authorization: Bearer <token>`.
 
@@ -160,6 +173,8 @@ One Node process serves both the fights (WebSocket) and the accounts and decks (
 | `POST /api/auth/register` | Email, password, display name. With a guest's token, that guest becomes the registered account and keeps its decks |
 | `POST /api/auth/login` | Token for a registered account |
 | `GET /api/me` | The account behind the token |
+| `GET /api/profile` | Rating and ranked record |
+| `GET /api/matches` | The account's latest 20 matches, newest first, each from its own point of view |
 | `GET /api/decks` | The account's decks |
 | `POST /api/decks` | Save a new deck; an account's first deck becomes its active one |
 | `PUT /api/decks/:id` | Change a deck's name and content |
@@ -170,15 +185,21 @@ Errors are `{ error, details? }` with a fitting status: 401 without a usable tok
 
 **Accounts.** Everyone is an account from the first visit: the client asks for a guest, which is a normal `users` row without an email, known only by the token in that browser. Registering fills in the email and password on the same row.
 
-**Decks in a fight.** A client never sends its deck to the room. It joins with its token; `DuelRoom.onAuth` looks up the account, loads its active deck (the default deck if it has none) and runs it through `parseDeck` and `validateDeck` again, because the move list may have changed since the deck was saved. A deck that fails is refused with the reason, and the player is not let in.
+**Decks in a fight.** A client never sends its deck to a room. It joins with its token; `authenticatePlayer` (the `onAuth` of both rooms) looks up the account, loads its active deck (the default deck if it has none) and runs it through `parseDeck` and `validateDeck` again, because the move list may have changed since the deck was saved. A deck that fails is refused with the reason, and the player is not let in.
 
-The room itself stays thin: it translates between Colyseus events and `DuelAuthority`. Fight state goes through messages; Colyseus room state is not used.
+**Ranked matches.** A client joins the matchmaking room and waits. Once a second `pairWaitingPlayers` pairs the queue: the longest-waiting player is served first and gets the closest-rated opponent within a rating difference that starts at 100 and widens by 50 for every second they have waited. For each pair the room creates a duel room and reserves a seat in it for both players, passing along the player it already authenticated, and sends each a `matchFound`. An account can be in the queue only once.
 
-Lifecycle: the first player waits; when the second joins the room locks and both receive `start`. A dropped player has 20 seconds to reconnect and gets a fresh `start`. If a player leaves for good the room closes.
+A ranked duel room must not be creatable by a client, yet Colyseus creates rooms from options a client could also send. So the matchmaker passes a one-use **ticket** that only this process knows (`issueMatchTicket` / `redeemMatchTicket`); a duel room created without a valid ticket is a private one. A ranked room lets in only the two accounts its ticket names, and closes if they have not both arrived within 15 seconds.
 
-**Tests:** `src/http/api.test.ts` and `src/rooms/DuelRoom.test.ts` run the real API and the room's token check against a separate `flowing_fist_test` database, which they create and empty themselves.
+**Private matches.** A client creates a duel room directly; the room gives itself a five-character id, which is the code the other player joins with (`joinById`). All duel rooms are hidden from Colyseus' own room search.
 
-**Current limits:** no matchmaking, match history or ratings; no OAuth, password reset or email verification; guests are never cleaned up; the same account can join a fight twice (two tabs of one browser share an account). Migrations only go forwards (Drizzle generates no "down" step). The rate limit and the fights live in memory, so there is one process. Cross-origin headers come from Colyseus, which allows any origin. The room measures elapsed time itself because the value Colyseus passes to the simulation callback is not reliable.
+**The duel room** stays thin: it translates between Colyseus events and `DuelAuthority`. Match state goes through messages; Colyseus room state is not used.
+
+Lifecycle: when the second player joins, the room locks and both receive `start`. A dropped player has 20 seconds to reconnect and gets a fresh `start`. The match ends when the simulation reaches "match over" or when a player leaves for good, which forfeits it to the other. Either way the room stores the match with `recordMatch`, sends both players `result` and closes. For a ranked match `recordMatch` also applies Elo to both ratings; a private match is stored without touching them.
+
+**Tests:** `src/http/api.test.ts`, `src/matches/matches.test.ts` and `src/rooms/DuelRoom.test.ts` run the real API, match recording and the rooms' token check against a separate `flowing_fist_test` database, which they create and empty themselves. `rooms/matchmaking.test.ts` and `ratings/elo.test.ts` need no database. The rooms themselves (queue, seat hand-over, forfeit, result) have no automated test; they were checked once with a scripted pair of clients.
+
+**Current limits:** one queue for everyone (no regions); guests are rated and matched like registered accounts; no rematch; a forfeit counts as a full loss however early it happens; no OAuth, password reset or email verification; guests are never cleaned up; the same account can sit on both sides of a private duel (two tabs of one browser share an account), but not of a ranked one. The queue and the tickets live in memory. Migrations only go forwards (Drizzle generates no "down" step). The rate limit and the fights live in memory, so there is one process. Cross-origin headers come from Colyseus, which allows any origin. The room measures elapsed time itself because the value Colyseus passes to the simulation callback is not reliable.
 
 ## apps/client — the game in the browser
 
@@ -195,9 +216,9 @@ Babylon.js for rendering, React for the HUD, Vite for bundling.
 
 | File | Contents |
 |---|---|
-| `sessions/GameSession.ts` | The interface: update, current and previous world, interpolation fraction, local player, status line |
+| `sessions/GameSession.ts` | The interface: update, current and previous world, interpolation fraction, local player, status line, and what to show before a fight (lobby) and after it (result) |
 | `sessions/TrainingSession.ts` | Local simulation against the training dummy, with pause and single-step. The player uses their active deck, the dummy the default one |
-| `sessions/DuelSession.ts` | Joins a room with the account's token, feeds a `PredictionClient`, tracks connection phase, optional simulated latency (`?latency=80`) |
+| `sessions/DuelSession.ts` | Gets into a duel room as asked — through the matchmaking queue, by creating a private room, or by joining one by code — then feeds a `PredictionClient`, tracks the phase (connecting, searching, waiting, fighting, reconnecting, finished, ended), keeps the result, optional simulated latency (`?latency=80`) |
 | `training/TrainingDummy.ts` | Generates the dummy's input: stand, guard or attack |
 
 **Input, view and camera**
@@ -214,21 +235,24 @@ Babylon.js for rendering, React for the HUD, Vite for bundling.
 | File | Contents |
 |---|---|
 | `api/apiClient.ts` | The server address and one typed function per API route |
-| `account/accountStore.ts` | Who the player is and which decks they own. Signs in with the remembered token or as a new guest, and is the only caller of the API. Publishes the active deck, which it also remembers in browser storage so training has it before the server answers, or when it cannot be reached |
+| `account/accountStore.ts` | Who the player is, which decks they own, their rating and latest matches (refreshed after signing in and after every match). Signs in with the remembered token or as a new guest, and is the only caller of the API. Publishes the active deck, which it also remembers in browser storage so training has it before the server answers, or when it cannot be reached |
 
 **HUD and menu**
 
 | File | Contents |
 |---|---|
 | `ui/hudStore.ts` | The only link from the fight to the UI: the game publishes plain data, React subscribes; also carries the actions the UI may trigger |
-| `ui/Hud.tsx` | Health and stamina bars, stance indicator, status line, controls help, session switch, menu button |
+| `ui/Hud.tsx` | Health and stamina bars, rounds won, round clock, announcements ("Round 2 · 3", "Fight!", "KO"), the lobby and result dialogs, stance indicator, status line, controls help, session switch, menu button |
 | `ui/menuStore.ts` | Whether the menu is open. While it is, `InputController`, `GameScene` and `TrainingSession` ignore the keyboard, so typing does not move the character |
-| `ui/Menu.tsx` | The overlay holding the account panel and the deck editor, or a notice when the server is unreachable |
+| `ui/Menu.tsx` | The overlay holding the account panel, the play panel and the deck editor, or a notice when the server is unreachable |
+| `ui/PlayPanel.tsx` | Find a ranked match, create a private duel or join one by code; rating and match history |
 | `ui/AccountPanel.tsx` | Who you are playing as; create account, log in, log out |
 | `ui/DeckEditor.tsx` | Deck list and the slot grid; save, activate, delete |
 | `ui/deckEditing.ts` | The editor's logic without React: which moves a slot may hold, and what changing a slot does to the rest of its sequence |
 
 When the active deck changes, `GameScene` restarts training with it. A duel keeps the decks it started with.
+
+`GameScene` builds the round display from `world.match` each frame, so it follows prediction and corrections like everything else drawn. The result dialog, by contrast, appears only on the server's `result` message, never on a predicted end of match.
 
 UI code is kept Preact-compatible: function components and hooks only.
 
@@ -236,7 +260,7 @@ UI code is kept Preact-compatible: function components and hooks only.
 
 **Tests:** `e2e/` holds Playwright tests that run the real game in headless Chromium. In dev builds the scene is exposed as `window.flowingFist` so tests can read the simulation state.
 
-**Current limits:** there are no attack animations, so an attack shows only as the character sliding forward plus the hitbox overlay. Only idle, run and strafe clips exist. The model is drawn mirrored, which is why the strafe clips are swapped in `CharacterView`. No sound or effects. The deck editor shows move names and end stances but no timings.
+**Current limits:** there are no attack animations, so an attack shows only as the character sliding forward plus the hitbox overlay. Only idle, run and strafe clips exist. The model is drawn mirrored, which is why the strafe clips are swapped in `CharacterView`. A parry is likewise visible only in the overlay and the status text. No sound or effects. The deck editor shows move names and end stances but no timings.
 
 ## tools/assets — asset preparation
 
@@ -257,8 +281,8 @@ Neither `assets-src/` nor the built model files are tracked in git.
 - **Tooling:** pnpm workspaces, TypeScript, ESLint (4-space indent, single quotes), Vitest, Playwright.
 - **No CI.** Checks are run by hand: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`. Playing the game through in the browser is done by the developer; `pnpm test:e2e` exists but is not part of the routine.
 - **Changing a table:** edit `apps/server/src/db/schema.ts`, run `db:generate`, commit the new file in `drizzle/`. It is applied the next time the server starts.
-- **Adding an API route:** types in `protocol`, the operation in `accounts/` or `decks/`, the route in `http/api.ts`, a function in the client's `apiClient.ts`, and a test in `api.test.ts`.
-- **Adding state to a character:** add the field in `createCharacter`; cloning, hashing and snapshots pick it up.
+- **Adding an API route:** types in `protocol`, the operation in `accounts/`, `decks/` or `matches/`, the route in `http/api.ts`, a function in the client's `apiClient.ts`, and a test in `api.test.ts`.
+- **Adding state to a character:** add the field in `createCharacter`; cloning, hashing and snapshots pick it up. It is reset between rounds unless `startNextRound` in `match.ts` carries it over.
 - **Adding a move:** add it to `moves.ts`; put it in a deck; `validateDeck` will tell you if the stances do not chain.
 - **Adding a message:** define it in `protocol`, handle it in `DuelRoom` and `DuelSession`, bump `PROTOCOL_VERSION`.
 

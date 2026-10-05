@@ -6,7 +6,7 @@ The fight is a deterministic 60 Hz simulation in plain TypeScript. The browser r
 
 ## Status
 
-Milestones M0–M4 of the [spec](docs/SPEC.md#milestones) are done: you can fight a training dummy offline, duel another player online, build and save your own decks, and play as a guest or with an account. Matchmaking, rounds and ratings (M5) are next.
+Milestones M0–M5 of the [spec](docs/SPEC.md#milestones) are done: you can fight a training dummy offline, play ranked matches against players of similar rating or private duels by code (first to 3 rounds, with parries and feints), build and save your own decks, and play as a guest or with an account. Polish and launch (M6) are next.
 
 Combat numbers are placeholders and there are no attack animations yet. An attack shows as the character sliding forward plus a coloured hitbox overlay.
 
@@ -32,7 +32,7 @@ pnpm run server        # duels, accounts and decks, on port 2567
 
 The server creates its database and tables by itself on start-up.
 
-Training mode needs only the client. Everything else needs the server and the database: press **B** in the game for the deck editor and your account, and for a duel open the game in two tabs and press **O** in each.
+Training mode needs only the client. Everything else needs the server and the database: press **B** in the game for online play, the deck editor and your account. For a ranked match press **O** in two browsers (or one normal and one private window, since an account cannot be matched against itself); for a private duel, create one from the menu and join it with its code from another tab.
 
 ### Character model
 

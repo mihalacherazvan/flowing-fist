@@ -1,18 +1,17 @@
 import { TRAINING_ARENA } from '@flowing-fist/content';
 import type { CombatDeck } from '@flowing-fist/content';
 import type { InputMessage, TickMessage, WorldSnapshot } from '@flowing-fist/protocol';
-import { EMPTY_INPUT, PI, createCharacter, createWorld, hashWorld, sanitiseInput, stepWorld } from '@flowing-fist/sim';
-import type { InputFrame, WorldState } from '@flowing-fist/sim';
+import { EMPTY_INPUT, MatchPhase, cloneMatch, createMatchWorld, hashWorld, sanitiseInput, stepWorld } from '@flowing-fist/sim';
+import type { InputFrame, MatchState, WorldState } from '@flowing-fist/sim';
 import { takeSnapshot } from './snapshot';
 
 // Inputs further from the current tick than this are refused, so a client cannot fill the server's memory
 const MAX_INPUT_LEAD_TICKS = 120;
 const MAX_INPUT_LATENESS_TICKS = 120;
-const START_DISTANCE = 6;
 
 /**
- * The server's side of a duel: the one true simulation. It collects each
- * player's input, steps the world, and reports what it used.
+ * The server's side of a duel: the one true simulation of a whole match. It
+ * collects each player's input, steps the world, and reports what it used.
  */
 export class DuelAuthority {
     private world: WorldState;
@@ -22,10 +21,7 @@ export class DuelAuthority {
     private connected: boolean[];
 
     constructor(decks: CombatDeck[]) {
-        this.world = createWorld(TRAINING_ARENA.radius, [
-            createCharacter(0, -START_DISTANCE / 2, 0),
-            createCharacter(0, START_DISTANCE / 2, PI)
-        ], decks);
+        this.world = createMatchWorld(TRAINING_ARENA.radius, decks);
 
         this.pendingInputs = this.world.characters.map(() => new Map());
         this.lastInputs = this.world.characters.map(() => EMPTY_INPUT);
@@ -35,6 +31,20 @@ export class DuelAuthority {
 
     public getTick(): number {
         return this.world.tick;
+    }
+
+    /**
+     * A copy of the rounds and score so far
+     */
+    public getMatch(): MatchState {
+        return cloneMatch(this.world.match)!;
+    }
+
+    /**
+     * True once the last round has been played; there is nothing left to simulate
+     */
+    public isMatchOver(): boolean {
+        return this.world.match?.phase === MatchPhase.MatchOver;
     }
 
     public getSnapshot(): WorldSnapshot {

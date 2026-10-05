@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_DECK } from '@flowing-fist/content';
 import { PROTOCOL_VERSION } from '@flowing-fist/protocol';
 import type { InputMessage, StartMessage, TickMessage } from '@flowing-fist/protocol';
-import { Button, encodeInput } from '@flowing-fist/sim';
+import { Button, MatchPhase, encodeInput, tuning } from '@flowing-fist/sim';
 import type { InputFrame } from '@flowing-fist/sim';
 import { DuelAuthority } from './DuelAuthority';
 import { PredictionClient } from './PredictionClient';
@@ -10,7 +10,15 @@ import { PredictionClient } from './PredictionClient';
 const DECKS = [DEFAULT_DECK, DEFAULT_DECK];
 
 function createStart(authority: DuelAuthority, slot: number): StartMessage {
-    return { protocolVersion: PROTOCOL_VERSION, slot, decks: DECKS, names: ['first', 'second'], snapshot: authority.getSnapshot() };
+    return {
+        protocolVersion: PROTOCOL_VERSION,
+        slot,
+        decks: DECKS,
+        names: ['first', 'second'],
+        ratings: [1000, 1000],
+        kind: 'private',
+        snapshot: authority.getSnapshot()
+    };
 }
 
 /**
@@ -22,7 +30,7 @@ function scriptedInput(slot: number, tick: number): InputFrame {
         | (phase % 131 === 0 ? Button.Alternate : 0)
         | (phase % 200 > 170 ? Button.Guard : 0)
         | (phase % 97 === 0 ? Button.Dodge : 0)
-        | (phase === 5 ? Button.LockOn : 0);
+        | (tick === 5 ? Button.LockOn : 0);
 
     return encodeInput(buttons, ((phase * 7) % 21 - 10) / 10, 0.6, slot === 0 ? 0 : Math.PI);
 }
@@ -138,8 +146,11 @@ describe('server-authoritative prediction', () => {
 
     it('predicts the local player ahead of the confirmed state', () => {
         const authority = new DuelAuthority(DECKS);
+        // Nobody can move until the countdown is over
+        for (let i = 0; i < tuning.ROUND_COUNTDOWN_TICKS; i++) authority.step();
         const client = new PredictionClient(createStart(authority, 0));
         const startX = authority.getSnapshot().characters[0].x;
+        const startTick = authority.getTick();
 
         client.advance(10, () => encodeInput(0, 1, 0, 0));
         const { previous, current } = client.predict();
@@ -147,8 +158,8 @@ describe('server-authoritative prediction', () => {
         expect(current.tick).toBe(client.getConfirmedTick() + client.getPredictionDepth());
         expect(previous.tick).toBe(current.tick - 1);
         expect(current.characters[0].x).toBeGreaterThan(startX + 0.4);
-        // The server has confirmed nothing yet
-        expect(client.getConfirmedTick()).toBe(0);
+        // The server has confirmed nothing since
+        expect(client.getConfirmedTick()).toBe(startTick);
     });
 
     it('recovers from a desync with a snapshot', () => {
@@ -184,6 +195,23 @@ describe('server-authoritative prediction', () => {
 
         const message = client.advance(1, () => encodeInput(0, 0, 1, 0));
         expect(message?.tick).toBeGreaterThan(authority.getTick());
+    });
+});
+
+describe('DuelAuthority match', () => {
+    it('plays rounds, and carries them in snapshots so a client can follow', () => {
+        const authority = new DuelAuthority(DECKS);
+        expect(authority.getMatch().phase).toBe(MatchPhase.Countdown);
+        expect(authority.isMatchOver()).toBe(false);
+
+        const client = new PredictionClient(createStart(authority, 1));
+        for (let i = 0; i < tuning.ROUND_COUNTDOWN_TICKS; i++) {
+            expect(client.receiveTick(authority.step()[1])).toBe(true);
+        }
+
+        expect(authority.getMatch().phase).toBe(MatchPhase.Fighting);
+        client.advance(1, () => encodeInput(0, 0, 0, 0));
+        expect(client.predict().current.match).toEqual({ ...authority.getMatch(), phaseTicks: expect.any(Number) });
     });
 });
 
@@ -229,7 +257,7 @@ describe('DuelAuthority input handling', () => {
         authority.receiveInput(1, { tick: -100000, frames: [encodeInput(0, 1, 0, 0)] });
 
         const [message] = authority.step();
-        expect(message.inputs[0]).toEqual({ buttons: 63, moveX: 127, moveY: 0, yaw: 0 });
+        expect(message.inputs[0]).toEqual({ buttons: 127, moveX: 127, moveY: 0, yaw: 0 });
         expect(message.inputs[1].moveX).toBe(0);
     });
 });

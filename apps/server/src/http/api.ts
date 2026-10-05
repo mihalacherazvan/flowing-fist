@@ -7,6 +7,7 @@ import { config } from '../config';
 import type { Database } from '../db/database';
 import type { UserRow } from '../db/schema';
 import { activateDeck, createDeck, deleteDeck, listDecks, updateDeck } from '../decks/decks';
+import { getProfile, listMatches } from '../matches/matches';
 import { HttpError } from './HttpError';
 import { rateLimit } from './rateLimit';
 
@@ -74,6 +75,16 @@ export function createApi(db: Database): Router {
 
     router.get('/me', async (request, response) => {
         response.status(200).json(toAccountInfo(await requireUser(request)));
+    });
+
+    router.get('/profile', async (request, response) => {
+        const user = await requireUser(request);
+        response.status(200).json(await getProfile(db, user.id));
+    });
+
+    router.get('/matches', async (request, response) => {
+        const user = await requireUser(request);
+        response.status(200).json(await listMatches(db, user.id));
     });
 
     router.get('/decks', async (request, response) => {

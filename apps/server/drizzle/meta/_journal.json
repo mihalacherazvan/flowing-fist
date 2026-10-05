@@ -8,6 +8,13 @@
       "when": 1791117135558,
       "tag": "0000_create_users_and_decks",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1791125208701,
+      "tag": "0001_add_matches_and_ratings",
+      "breakpoints": true
     }
   ]
 }

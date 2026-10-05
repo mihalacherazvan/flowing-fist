@@ -59,7 +59,79 @@ html, body {
 
 .hud-panel-left { left: 16px; }
 .hud-panel-right { right: 16px; text-align: right; }
-.hud-panel-right .hud-row { flex-direction: row-reverse; }
+.hud-panel-right .hud-rounds {
+  display: flex;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.hud-panel-right .hud-rounds { justify-content: flex-end; }
+
+.hud-round {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.hud-round.is-won { background: #f2d24b; }
+
+.hud-clock {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+.hud-clock-time { font-size: 34px; font-weight: bold; line-height: 1; }
+.hud-clock-round { font-size: 12px; opacity: 0.85; }
+
+.hud-announcement {
+  position: absolute;
+  top: 30%;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 44px;
+  font-weight: bold;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+.hud-dialog {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  min-width: 300px;
+  transform: translate(-50%, -50%);
+  padding: 18px 24px;
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  text-align: center;
+  pointer-events: auto;
+  text-shadow: none;
+  background: rgba(20, 20, 24, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.hud-dialog .hud-button { margin-top: 0; }
+.hud-dialog-problem { color: #ff9d96; }
+.hud-result-title { font-size: 36px; font-weight: bold; }
+.hud-result-detail { font-size: 20px; }
+
+.hud-code {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 30px;
+  font-weight: bold;
+  letter-spacing: 4px;
+  user-select: text;
+}
+
+.hud-row { flex-direction: row-reverse; }
 
 .hud-name {
   font-size: 14px;
@@ -78,6 +150,78 @@ html, body {
 .hud-panel-right .hud-bar-fill { margin-left: auto; }
 .hud-health { background: #d9423a; }
 .hud-stamina { background: #e8c53a; }
+
+.hud-rounds {
+  display: flex;
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.hud-panel-right .hud-rounds { justify-content: flex-end; }
+
+.hud-round {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+}
+
+.hud-round.is-won { background: #f2d24b; }
+
+.hud-clock {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+.hud-clock-time { font-size: 34px; font-weight: bold; line-height: 1; }
+.hud-clock-round { font-size: 12px; opacity: 0.85; }
+
+.hud-announcement {
+  position: absolute;
+  top: 30%;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 44px;
+  font-weight: bold;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
+}
+
+.hud-dialog {
+  position: absolute;
+  top: 38%;
+  left: 50%;
+  min-width: 300px;
+  transform: translate(-50%, -50%);
+  padding: 18px 24px;
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+  text-align: center;
+  pointer-events: auto;
+  text-shadow: none;
+  background: rgba(20, 20, 24, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+.hud-dialog .hud-button { margin-top: 0; }
+.hud-dialog-problem { color: #ff9d96; }
+.hud-result-title { font-size: 36px; font-weight: bold; }
+.hud-result-detail { font-size: 20px; }
+
+.hud-code {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 30px;
+  font-weight: bold;
+  letter-spacing: 4px;
+  user-select: text;
+}
 
 .hud-row {
   display: flex;
@@ -214,3 +358,20 @@ html, body {
 .deck-table th { padding: 4px 6px 4px 0; font-size: 12px; text-align: left; white-space: nowrap; }
 .deck-table td { padding: 3px 6px 3px 0; }
 .deck-table select { width: 100%; padding: 5px 4px; font-size: 13px; }
+
+.play-panel {
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.play-panel > .menu-actions { margin-top: 0; }
+.play-join { margin-top: 0; }
+.play-code { width: 90px; text-transform: uppercase; }
+.play-rating { margin-top: 10px; }
+
+.match-table { margin-top: 10px; border-collapse: collapse; font-size: 13px; }
+.match-table th { padding: 2px 18px 4px 0; font-size: 12px; text-align: left; opacity: 0.75; }
+.match-table td { padding: 2px 18px 2px 0; }
+.match-win { color: #9be28f; }
+.match-loss { color: #ff9d96; }

@@ -6,7 +6,8 @@ export const Button = {
     LockOn: 1 << 2,
     Attack: 1 << 3,
     Alternate: 1 << 4,
-    Guard: 1 << 5
+    Guard: 1 << 5,
+    Parry: 1 << 6
 } as const;
 
 const MOVE_AXIS_MAX = 127;

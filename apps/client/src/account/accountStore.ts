@@ -1,6 +1,15 @@
 import { DEFAULT_DECK, parseDeck, validateDeck } from '@flowing-fist/content';
 import type { CombatDeck } from '@flowing-fist/content';
-import type { AccountInfo, AuthResponse, DeckRequest, LoginRequest, RegisterRequest, SavedDeck } from '@flowing-fist/protocol';
+import type {
+    AccountInfo,
+    AuthResponse,
+    DeckRequest,
+    LoginRequest,
+    MatchSummary,
+    ProfileResponse,
+    RegisterRequest,
+    SavedDeck
+} from '@flowing-fist/protocol';
 import { ApiError, NETWORK_ERROR_STATUS, api } from '../api/apiClient';
 
 const TOKEN_KEY = 'flowing-fist.token';
@@ -13,6 +22,10 @@ export interface AccountState {
     decks: SavedDeck[];
     /** The deck fights are played with: the account's active deck, or the default one */
     activeDeck: CombatDeck;
+    /** Rating and ranked record; null until the server has answered */
+    profile: ProfileResponse | null;
+    /** Latest matches, newest first */
+    matches: MatchSummary[];
 }
 
 type Listener = () => void;
@@ -36,7 +49,14 @@ function readRememberedDeck(): CombatDeck {
  * know about the account comes from here; this is the only caller of the API.
  */
 class AccountStore {
-    private state: AccountState = { status: 'connecting', account: null, decks: [], activeDeck: readRememberedDeck() };
+    private state: AccountState = {
+        status: 'connecting',
+        account: null,
+        decks: [],
+        activeDeck: readRememberedDeck(),
+        profile: null,
+        matches: []
+    };
     private token: string | null = localStorage.getItem(TOKEN_KEY);
     private listeners: Set<Listener> = new Set();
     private connecting: Promise<void> | null = null;
@@ -71,8 +91,26 @@ class AccountStore {
         this.token = response.token;
         localStorage.setItem(TOKEN_KEY, response.token);
 
-        this.setState({ status: 'online', account: response.account });
+        this.setState({ status: 'online', account: response.account, profile: null, matches: [] });
         this.setDecks(await api.listDecks(response.token));
+        await this.refreshProfile();
+    }
+
+    /**
+     * Fetch the rating and match history again; called after signing in and after every match.
+     * A failure is not reported: the menu simply keeps showing what it had.
+     */
+    public async refreshProfile(): Promise<void> {
+        const token = this.token;
+        if (!token || this.state.status !== 'online') return;
+
+        try {
+            const [profile, matches] = await Promise.all([api.getProfile(token), api.listMatches(token)]);
+            // The player may have switched account while the answer was on its way
+            if (token === this.token) this.setState({ profile, matches });
+        } catch (error) {
+            if (!(error instanceof ApiError)) console.error(error);
+        }
     }
 
     /**

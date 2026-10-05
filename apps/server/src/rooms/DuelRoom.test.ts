@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { DEFAULT_DECK, createEmptyDeck } from '@flowing-fist/content';
 import type { CombatDeck } from '@flowing-fist/content';
+import { STARTING_RATING } from '@flowing-fist/protocol';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { decks } from '../db/schema';
 import { startTestServer } from '../testing/testServer';
@@ -33,7 +34,8 @@ describe('DuelRoom.onAuth', () => {
         expect(await DuelRoom.onAuth(guest.token)).toEqual({
             userId: guest.account.id,
             displayName: guest.account.displayName,
-            deck: DEFAULT_DECK
+            deck: DEFAULT_DECK,
+            rating: STARTING_RATING
         });
     });
 

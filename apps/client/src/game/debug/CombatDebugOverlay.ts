@@ -17,6 +17,9 @@ const BODY_COLORS = {
     blockStun: new Color3(0.6, 0.8, 1),
     hitStun: new Color3(1, 1, 1),
     guardBroken: new Color3(1, 0.3, 0.9),
+    parryWindow: new Color3(0.2, 1, 1),
+    parryRecovery: new Color3(0.1, 0.5, 0.5),
+    parried: new Color3(1, 0.55, 0.1),
     dodging: new Color3(0.5, 0.5, 0.5),
     knockedOut: new Color3(0.1, 0.1, 0.1)
 };
@@ -106,6 +109,9 @@ export class CombatDebugOverlay {
         if (character.stunKind === StunKind.Hit) return BODY_COLORS.hitStun;
         if (character.stunKind === StunKind.GuardBroken) return BODY_COLORS.guardBroken;
         if (character.stunKind === StunKind.Block) return BODY_COLORS.blockStun;
+        if (character.stunKind === StunKind.Parried) return BODY_COLORS.parried;
+        if (character.parryTicks > tuning.PARRY_TICKS - tuning.PARRY_WINDOW_TICKS) return BODY_COLORS.parryWindow;
+        if (character.parryTicks > 0) return BODY_COLORS.parryRecovery;
         if (character.guarding) return BODY_COLORS.guarding;
         if (character.dodgeTicks > 0) return BODY_COLORS.dodging;
 

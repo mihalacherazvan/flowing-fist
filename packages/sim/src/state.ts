@@ -6,8 +6,20 @@ export const StunKind = {
     None: 0,
     Hit: 1,
     Block: 2,
-    GuardBroken: 3
+    GuardBroken: 3,
+    /** The character's attack was parried */
+    Parried: 4
 } as const;
+
+export const MatchPhase = {
+    Countdown: 0,
+    Fighting: 1,
+    RoundOver: 2,
+    MatchOver: 3
+} as const;
+
+/** In place of a character index, for a drawn round or match and before one is decided */
+export const NO_WINNER = -1;
 
 export const QueuedAttack = {
     None: 0,
@@ -59,6 +71,27 @@ export interface CharacterState {
     stunKind: number;
     /** Ticks left knocked out, 0 when standing */
     knockoutTicks: number;
+    /** Ticks left in the current parry, 0 when not parrying */
+    parryTicks: number;
+}
+
+/**
+ * Rounds and score. Part of the world so that it is predicted, hashed and
+ * corrected exactly like the fight itself.
+ */
+export interface MatchState {
+    /** A MatchPhase value */
+    phase: number;
+    /** Ticks left in the phase; while fighting, the time left in the round */
+    phaseTicks: number;
+    /** 1 for the first round */
+    round: number;
+    /** Rounds won by each character */
+    wins: number[];
+    /** Character that won the latest round, or NO_WINNER */
+    roundWinner: number;
+    /** Character that won the match, or NO_WINNER */
+    matchWinner: number;
 }
 
 /**
@@ -74,6 +107,8 @@ export interface WorldState {
     tick: number;
     arenaRadius: number;
     characters: CharacterState[];
+    /** Null when there are no rounds, as in training */
+    match: MatchState | null;
     /** decks[i] belongs to characters[i]. Fixed for the whole fight. */
     decks: readonly CompiledDeck[];
 }
@@ -105,7 +140,8 @@ export function createCharacter(x: number, z: number, yaw: number): CharacterSta
         chainIndex: 0,
         stunTicks: 0,
         stunKind: StunKind.None,
-        knockoutTicks: 0
+        knockoutTicks: 0,
+        parryTicks: 0
     };
 }
 
@@ -122,8 +158,17 @@ export function compileDeck(deck: CombatDeck): CompiledDeck {
     };
 }
 
-export function createWorld(arenaRadius: number, characters: CharacterState[], decks: CombatDeck[]): WorldState {
-    return { tick: 0, arenaRadius, characters, decks: decks.map(compileDeck) };
+export function createWorld(
+    arenaRadius: number,
+    characters: CharacterState[],
+    decks: CombatDeck[],
+    match: MatchState | null = null
+): WorldState {
+    return { tick: 0, arenaRadius, characters, match, decks: decks.map(compileDeck) };
+}
+
+export function cloneMatch(match: MatchState | null): MatchState | null {
+    return match ? { ...match, wins: [...match.wins] } : null;
 }
 
 export function cloneWorld(world: WorldState): WorldState {
@@ -131,6 +176,7 @@ export function cloneWorld(world: WorldState): WorldState {
         tick: world.tick,
         arenaRadius: world.arenaRadius,
         characters: world.characters.map((character) => ({ ...character })),
+        match: cloneMatch(world.match),
         decks: world.decks
     };
 }
@@ -142,7 +188,11 @@ const CHARACTER_FIELDS = Object.keys(createCharacter(0, 0, 0)) as (keyof Charact
  * 32-bit FNV-1a hash of everything in the world that changes during a fight
  */
 export function hashWorld(world: WorldState): number {
-    const values = new Float64Array(2 + world.characters.length * CHARACTER_FIELDS.length);
+    const match = world.match;
+    const matchValues = match
+        ? [match.phase, match.phaseTicks, match.round, ...match.wins, match.roundWinner, match.matchWinner]
+        : [];
+    const values = new Float64Array(2 + world.characters.length * CHARACTER_FIELDS.length + matchValues.length);
     let index = 0;
 
     values[index++] = world.tick;
@@ -152,6 +202,10 @@ export function hashWorld(world: WorldState): number {
         for (const field of CHARACTER_FIELDS) {
             values[index++] = Number(character[field]);
         }
+    }
+
+    for (const value of matchValues) {
+        values[index++] = value;
     }
 
     const bytes = new Uint8Array(values.buffer);

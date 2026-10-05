@@ -1,4 +1,5 @@
 import type { InputFrame, WorldState } from '@flowing-fist/sim';
+import type { HudLobby, HudResult } from '../../ui/hudStore';
 
 /**
  * Where the simulated world comes from. The scene draws whatever a session
@@ -30,6 +31,12 @@ export interface GameSession {
 
     /** One line for the HUD describing the session */
     getStatusLine(): string;
+
+    /** What to show while there is no fight yet (or no longer): looking for an opponent, waiting, cut off. Null otherwise. */
+    getLobby(): HudLobby | null;
+
+    /** How the match ended, once it has. Null otherwise. */
+    getResult(): HudResult | null;
 
     dispose(): void;
 }

@@ -2,6 +2,7 @@ import { DEFAULT_DECK, TRAINING_ARENA } from '@flowing-fist/content';
 import type { CombatDeck } from '@flowing-fist/content';
 import { FixedTimestep, PI, cloneWorld, createCharacter, createWorld, stepWorld } from '@flowing-fist/sim';
 import type { InputFrame, WorldState } from '@flowing-fist/sim';
+import type { HudLobby, HudResult } from '../../ui/hudStore';
 import { menuStore } from '../../ui/menuStore';
 import { TrainingDummy } from '../training/TrainingDummy';
 import type { GameSession } from './GameSession';
@@ -78,6 +79,14 @@ export class TrainingSession implements GameSession {
 
     public getStatusLine(): string {
         return `Training · dummy: ${this.dummy.getMode()}${this.paused ? ' · PAUSED' : ''}`;
+    }
+
+    public getLobby(): HudLobby | null {
+        return null;
+    }
+
+    public getResult(): HudResult | null {
+        return null;
     }
 
     public dispose(): void {

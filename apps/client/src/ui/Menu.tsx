@@ -4,9 +4,10 @@ import { getServerUrl } from '../api/apiClient';
 import { AccountPanel } from './AccountPanel';
 import { DeckEditor } from './DeckEditor';
 import { menuStore } from './menuStore';
+import { PlayPanel } from './PlayPanel';
 
 /**
- * The deck editor and the account, shown over the game
+ * Online play, the account and the deck editor, shown over the game
  */
 export function Menu() {
     const isOpen = useSyncExternalStore(menuStore.subscribe, menuStore.isOpen);
@@ -17,13 +18,14 @@ export function Menu() {
     return (
         <div className="menu" data-testid="menu">
             <div className="menu-header">
-                <h1>Decks and account</h1>
+                <h1>Play online, decks and account</h1>
                 <button className="menu-button" data-testid="menu-close" onClick={() => menuStore.setOpen(false)}>Close (Esc)</button>
             </div>
 
             {account.status === 'online' && account.account ? (
                 <>
                     <AccountPanel account={account.account} />
+                    <PlayPanel account={account} />
                     {/* A different account has different decks, so the editor starts over */}
                     <DeckEditor key={account.account.id} account={account} />
                 </>
@@ -32,7 +34,7 @@ export function Menu() {
             ) : (
                 <>
                     <p className="menu-problem">
-                        Could not reach the server at {getServerUrl()}. Decks and accounts need it; training carries on
+                        Could not reach the server at {getServerUrl()}. Online duels, decks and accounts need it; training carries on
                         with the deck you last used.
                     </p>
                     <div className="menu-actions">

@@ -152,6 +152,7 @@ export class InputController {
         if (this.isKeyActive('mouse0') || this.isKeyActive('KeyJ')) buttons |= Button.Attack;
         if (this.isKeyActive('mouse2') || this.isKeyActive('KeyK')) buttons |= Button.Alternate;
         if (this.isKeyActive('KeyQ')) buttons |= Button.Guard;
+        if (this.isKeyActive('KeyE')) buttons |= Button.Parry;
 
         this.keysPressedSinceSample.clear();
 

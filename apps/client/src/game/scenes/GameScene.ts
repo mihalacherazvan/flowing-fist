@@ -11,10 +11,11 @@ import { SkyMaterial } from '@babylonjs/materials/sky';
 import type { Engine as EngineType } from '@babylonjs/core/Engines/engine';
 import type { Mesh as MeshType } from '@babylonjs/core/Meshes/mesh';
 import { STANCES } from '@flowing-fist/content';
-import { StunKind, getCurrentMove, getMovePhase, tuning } from '@flowing-fist/sim';
+import { MatchPhase, NO_WINNER, StunKind, TICK_RATE, getCurrentMove, getMovePhase, tuning } from '@flowing-fist/sim';
 import type { CharacterState, WorldState } from '@flowing-fist/sim';
 import { accountStore } from '../../account/accountStore';
 import { hudStore } from '../../ui/hudStore';
+import type { DuelRequest, HudMatch } from '../../ui/hudStore';
 import { menuStore } from '../../ui/menuStore';
 import { CameraRig } from '../camera/CameraRig';
 import { CharacterView } from '../characters/CharacterView';
@@ -25,6 +26,8 @@ import { TrainingSession } from '../sessions/TrainingSession';
 import { InputController } from '../utils/InputController';
 
 const CHARACTER_COUNT = 2;
+/** How long "Fight!" stays up once a round starts */
+const FIGHT_ANNOUNCEMENT_TICKS = 45;
 
 export class GameScene {
     private scene: Scene;
@@ -165,7 +168,7 @@ export class GameScene {
      */
     private setupSessionControls(): void {
         const startTraining = () => this.startSession(new TrainingSession(accountStore.getState().activeDeck));
-        const startDuel = () => this.startSession(new DuelSession());
+        const startDuel = (request: DuelRequest) => this.startSession(new DuelSession(request));
 
         hudStore.actions = { startTraining, startDuel };
 
@@ -179,8 +182,9 @@ export class GameScene {
             if (event.code === 'KeyB') menuStore.setOpen(true);
             if (event.code === 'KeyO') {
                 if (this.session.mode === 'training') {
-                    startDuel();
-                } else {
+                    startDuel({ kind: 'ranked' });
+                } else if (!this.isMatchInProgress()) {
+                    // Leaving a match in progress gives it away, which is too much for one stray key press
                     startTraining();
                 }
             }
@@ -196,6 +200,13 @@ export class GameScene {
             if (this.session.mode === 'training') startTraining();
         });
         accountStore.connect();
+    }
+
+    /**
+     * True while an online match is being fought: it has started and has no result yet
+     */
+    private isMatchInProgress(): boolean {
+        return this.session.mode === 'duel' && !this.session.getLobby() && !this.session.getResult();
     }
 
     private startSession(session: GameSession): void {
@@ -229,6 +240,7 @@ export class GameScene {
 
     private publishHud(world: WorldState): void {
         const names = this.session.getCharacterNames();
+        const result = this.session.getResult();
 
         hudStore.publish({
             mode: this.session.mode,
@@ -239,10 +251,46 @@ export class GameScene {
                 stamina: character.stamina,
                 maxStamina: tuning.MAX_STAMINA,
                 stance: STANCES[character.stance],
-                status: GameScene.describeStatus(character)
+                status: GameScene.describeStatus(character),
+                roundsWon: world.match ? world.match.wins[index] : null
             })),
-            statusLine: this.session.getStatusLine()
+            statusLine: this.session.getStatusLine(),
+            // Once the result is up it says everything the round display would
+            match: result ? null : this.describeMatch(world),
+            lobby: this.session.getLobby(),
+            result,
+            isMatchInProgress: this.isMatchInProgress()
         });
+    }
+
+    /**
+     * The round number, the clock and what to announce, from the match in the world
+     */
+    private describeMatch(world: WorldState): HudMatch | null {
+        const match = world.match;
+        if (!match) return null;
+
+        let secondsLeft: number | null = null;
+        let announcement = '';
+
+        if (match.phase === MatchPhase.Countdown) {
+            secondsLeft = tuning.ROUND_TICKS / TICK_RATE;
+            announcement = `Round ${match.round} · ${Math.ceil(match.phaseTicks / TICK_RATE)}`;
+        } else if (match.phase === MatchPhase.Fighting) {
+            secondsLeft = Math.ceil(match.phaseTicks / TICK_RATE);
+            if (match.phaseTicks > tuning.ROUND_TICKS - FIGHT_ANNOUNCEMENT_TICKS) announcement = 'Fight!';
+        } else {
+            const isKnockout = world.characters.some((character) => character.health <= 0);
+            const winner = match.roundWinner;
+            // Only duels have rounds, so the local player is always one of the two
+            const outcome = winner === NO_WINNER ? 'Round drawn'
+                : winner === this.session.getLocalPlayerIndex() ? 'You win the round'
+                    : 'You lose the round';
+
+            announcement = `${isKnockout ? 'KO' : 'Time up'} · ${outcome}`;
+        }
+
+        return { round: match.round, roundsToWin: tuning.ROUNDS_TO_WIN, secondsLeft, announcement };
     }
 
     private static describeStatus(character: CharacterState): string {
@@ -250,9 +298,11 @@ export class GameScene {
         if (character.stunKind === StunKind.Hit) return 'Hit';
         if (character.stunKind === StunKind.Block) return 'Blocked';
         if (character.stunKind === StunKind.GuardBroken) return 'Guard broken';
+        if (character.stunKind === StunKind.Parried) return 'Parried';
 
         const move = getCurrentMove(character);
         if (move) return `${move.name} (${getMovePhase(character)})`;
+        if (character.parryTicks > 0) return 'Parrying';
         if (character.dodgeTicks > 0) return 'Dodging';
         if (character.guarding) return 'Guarding';
 

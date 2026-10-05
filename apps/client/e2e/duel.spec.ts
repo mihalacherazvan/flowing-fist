@@ -39,7 +39,7 @@ for (const latencyQuery of ['', '?latency=80']) {
         const secondPage = await openGame(browser, latencyQuery, errors);
 
         await firstPage.keyboard.press('KeyO');
-        await expect(firstPage.getByTestId('hud-status')).toContainText('waiting for an opponent');
+        await expect(firstPage.getByTestId('hud-status')).toContainText('looking for an opponent');
 
         await secondPage.keyboard.press('KeyO');
         await expect(firstPage.getByTestId('hud-status')).toContainText('predicting');
@@ -76,9 +76,9 @@ for (const latencyQuery of ['', '?latency=80']) {
                 && first[index].health === second[index].health);
         }).toBe(true);
 
-        // Leaving ends the fight for the other player
-        await secondPage.keyboard.press('KeyO');
-        await expect(firstPage.getByTestId('hud-status')).toContainText('Opponent left');
+        // Leaving gives the match to the other player
+        await secondPage.getByRole('button', { name: 'Forfeit the match' }).click();
+        await expect(firstPage.getByTestId('hud-result')).toContainText('Victory');
 
         expect(errors).toEqual([]);
 

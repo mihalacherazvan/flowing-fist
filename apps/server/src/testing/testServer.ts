@@ -5,7 +5,7 @@ import express from 'express';
 import { config } from '../config';
 import { openDatabase } from '../db/database';
 import type { Database } from '../db/database';
-import { decks, users } from '../db/schema';
+import { decks, matchPlayers, matches, ratings, users } from '../db/schema';
 import { createApi } from '../http/api';
 
 export interface TestServer {
@@ -14,7 +14,7 @@ export interface TestServer {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- tests read whatever the API answered
     request(method: string, path: string, options?: { token?: string; body?: unknown }): Promise<{ status: number; body: any }>;
     createGuest(): Promise<AuthResponse>;
-    /** Remove every account and deck */
+    /** Remove every account and everything that belongs to one */
     reset(): Promise<void>;
     close(): Promise<void>;
 }
@@ -50,6 +50,9 @@ export async function startTestServer(): Promise<TestServer> {
         request,
         createGuest: async () => (await request('POST', '/auth/guest')).body,
         reset: async () => {
+            await database.db.delete(matchPlayers);
+            await database.db.delete(matches);
+            await database.db.delete(ratings);
             await database.db.delete(decks);
             await database.db.delete(users);
         },

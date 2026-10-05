@@ -5,6 +5,8 @@ import type {
     AuthResponse,
     DeckRequest,
     LoginRequest,
+    MatchSummary,
+    ProfileResponse,
     RegisterRequest,
     SavedDeck
 } from '@flowing-fist/protocol';
@@ -54,6 +56,9 @@ export const api = {
     register: (token: string | null, details: RegisterRequest) => request<AuthResponse>('POST', '/auth/register', token, details),
     logIn: (details: LoginRequest) => request<AuthResponse>('POST', '/auth/login', null, details),
     getAccount: (token: string) => request<AccountInfo>('GET', '/me', token),
+    getProfile: (token: string) => request<ProfileResponse>('GET', '/profile', token),
+    /** @returns the account's latest matches, newest first */
+    listMatches: (token: string) => request<MatchSummary[]>('GET', '/matches', token),
     listDecks: (token: string) => request<SavedDeck[]>('GET', '/decks', token),
     createDeck: (token: string, deck: DeckRequest) => request<SavedDeck>('POST', '/decks', token, deck),
     updateDeck: (token: string, deckId: string, deck: DeckRequest) => request<SavedDeck>('PUT', `/decks/${deckId}`, token, deck),

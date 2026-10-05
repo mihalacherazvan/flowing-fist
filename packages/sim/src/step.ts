@@ -1,8 +1,9 @@
 import { TICK_RATE } from './FixedTimestep';
-import { finishMove, getCurrentMove, resolveHits, spendStamina, startAttack } from './combat';
+import { finishMove, getCurrentMove, resetChain, resolveHits, spendStamina, startAttack } from './combat';
 import { Button, EMPTY_INPUT, inputAxisToUnit, inputYawToRadians } from './input';
 import type { InputFrame } from './input';
 import { atan2, cos, sin, wrapAngle } from './math';
+import { isFightOn, stepMatch } from './match';
 import { QueuedAttack, StunKind } from './state';
 import type { CharacterState, WorldState } from './state';
 import {
@@ -11,9 +12,12 @@ import {
     DODGE_SPEED,
     DODGE_STAMINA_COST,
     DODGE_TICKS,
+    FEINT_STAMINA_COST,
     GUARD_MOVE_SPEED,
     MAX_HEALTH,
     MAX_STAMINA,
+    PARRY_STAMINA_COST,
+    PARRY_TICKS,
     RUN_SPEED,
     STAMINA_REGEN_PER_TICK,
     WALK_SPEED
@@ -24,18 +28,33 @@ import {
  * a missing entry is treated as no input.
  */
 export function stepWorld(world: WorldState, inputs: readonly InputFrame[]): void {
+    const isFighting = isFightOn(world);
+
     for (let i = 0; i < world.characters.length; i++) {
-        stepCharacter(world, i, inputs[i] ?? EMPTY_INPUT);
+        const input = inputs[i] ?? EMPTY_INPUT;
+        stepCharacter(world, i, isFighting ? input : betweenRounds(input));
     }
 
-    resolveHits(world);
+    if (isFighting) {
+        resolveHits(world);
+    }
     separateCharacters(world);
 
     for (const character of world.characters) {
         keepInsideArena(character, world.arenaRadius);
     }
 
+    stepMatch(world);
+
     world.tick++;
+}
+
+/**
+ * Outside the fighting part of a round the characters stand where they are:
+ * only the lock-on toggle gets through
+ */
+function betweenRounds(input: InputFrame): InputFrame {
+    return { buttons: input.buttons & Button.LockOn, moveX: 0, moveY: 0, yaw: input.yaw };
 }
 
 function stepCharacter(world: WorldState, index: number, input: InputFrame): void {
@@ -80,9 +99,10 @@ function stepCharacter(world: WorldState, index: number, input: InputFrame): voi
 
     const isIncapacitated = character.knockoutTicks > 0 || character.stunTicks > 0;
     const isAttacking = character.moveIndex >= 0;
+    const isParrying = character.parryTicks > 0;
 
     // Decide what to start this tick. Only a character in neutral can start anything.
-    if (!isIncapacitated && !isAttacking) {
+    if (!isIncapacitated && !isAttacking && !isParrying) {
         if (character.lockedOn && target) {
             faceTarget(character, target);
         } else if (isMoving) {
@@ -98,6 +118,10 @@ function stepCharacter(world: WorldState, index: number, input: InputFrame): voi
 
             if (requestedAttack !== QueuedAttack.None && startAttack(character, deck, requestedAttack, false)) {
                 // startAttack has set the move up
+            } else if ((pressedButtons & Button.Parry) && character.stamina >= PARRY_STAMINA_COST) {
+                character.parryTicks = PARRY_TICKS;
+                character.guarding = false;
+                spendStamina(character, PARRY_STAMINA_COST);
             } else if ((pressedButtons & Button.Dodge) && canDodge) {
                 const moveLength = Math.sqrt(moveX * moveX + moveZ * moveZ);
                 character.dodgeTicks = DODGE_TICKS;
@@ -119,11 +143,21 @@ function stepCharacter(world: WorldState, index: number, input: InputFrame): voi
 
     const move = getCurrentMove(character);
 
+    // A feint: pressing guard while an attack is still winding up calls it off
+    const isFeinting = move !== null
+        && (pressedButtons & Button.Guard) !== 0
+        && character.moveTick > 0
+        && character.moveTick < move.startupTicks
+        && character.stamina >= FEINT_STAMINA_COST;
+
     if (character.knockoutTicks > 0) {
-        character.knockoutTicks--;
-        if (character.knockoutTicks === 0) {
-            character.health = MAX_HEALTH;
-            character.stamina = MAX_STAMINA;
+        // In a match a knocked-out character stays down until the next round
+        if (!world.match) {
+            character.knockoutTicks--;
+            if (character.knockoutTicks === 0) {
+                character.health = MAX_HEALTH;
+                character.stamina = MAX_STAMINA;
+            }
         }
     } else if (character.stunTicks > 0) {
         // Keep blocking through block stun so the rest of a chain is blocked too
@@ -133,6 +167,10 @@ function stepCharacter(world: WorldState, index: number, input: InputFrame): voi
         if (character.stunTicks === 0) {
             character.stunKind = StunKind.None;
         }
+    } else if (move && isFeinting) {
+        // The stance does not change: the attack never finished
+        spendStamina(character, FEINT_STAMINA_COST);
+        resetChain(character);
     } else if (move) {
         if (requestedAttack !== QueuedAttack.None && character.moveTick > 0) {
             character.queuedAttack = requestedAttack;
@@ -153,6 +191,8 @@ function stepCharacter(world: WorldState, index: number, input: InputFrame): voi
         if (character.moveTick >= advanceTicks + move.recoveryTicks) {
             finishMove(character, deck);
         }
+    } else if (character.parryTicks > 0) {
+        character.parryTicks--;
     } else if (character.dodgeTicks > 0) {
         directionX = character.dodgeDirectionX;
         directionZ = character.dodgeDirectionZ;
@@ -208,7 +248,7 @@ function regenerateStamina(character: CharacterState): void {
         return;
     }
 
-    const isBusy = character.guarding || character.moveIndex >= 0 || character.dodgeTicks > 0;
+    const isBusy = character.guarding || character.moveIndex >= 0 || character.dodgeTicks > 0 || character.parryTicks > 0;
     if (!isBusy && character.knockoutTicks === 0) {
         character.stamina = Math.min(MAX_STAMINA, character.stamina + STAMINA_REGEN_PER_TICK);
     }
