@@ -17,8 +17,10 @@ type AnimationNames = 'idle'
     | 'left-strafe'
     | 'right-strafe';
 
-// Below this the character counts as not moving along that axis
-const MOVE_THRESHOLD = 0.1;
+// Below this the character counts as not moving along that axis. It is the sine
+// of 22.5 degrees, so a direction within that angle of straight sideways is a strafe
+// and one within it of straight ahead is a run; anything between is a diagonal.
+const MOVE_THRESHOLD = 0.38;
 const ROOT_HEIGHT = 1;
 
 /**
@@ -31,6 +33,8 @@ export class CharacterView {
     private animations: Map<AnimationNames, AnimationGroup> = new Map();
     private currentAnimationName?: AnimationNames;
     private currentAnimation?: AnimationGroup;
+    /** The animation and model twist chosen when the dodge in progress began; null when not dodging */
+    private dodgePose: { animationName: AnimationNames; twist: number } | null = null;
 
     constructor(private scene: Scene, name: string) {
         // Create a root node for the character
@@ -114,6 +118,16 @@ export class CharacterView {
             // scaling is set above), so the strafe clips are swapped
             animationName = right > 0 ? 'left-strafe' : 'right-strafe';
             twist = forward > 0 ? -right * Math.PI / 4 : 0;
+        }
+
+        // A dodge keeps its direction while the character may keep turning (towards a
+        // locked-on opponent, say), so its direction relative to the facing drifts.
+        // Hold the pose it started with rather than sliding into another animation.
+        if (state.dodgeTicks === 0) {
+            this.dodgePose = null;
+        } else {
+            this.dodgePose ??= { animationName, twist };
+            ({ animationName, twist } = this.dodgePose);
         }
 
         this.mesh.rotation.y = twist;

@@ -55,83 +55,14 @@ html, body {
   position: absolute;
   top: 16px;
   width: min(32vw, 360px);
+  padding: 8px 10px;
+  background: rgba(15, 15, 18, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .hud-panel-left { left: 16px; }
 .hud-panel-right { right: 16px; text-align: right; }
-.hud-panel-right .hud-rounds {
-  display: flex;
-  gap: 5px;
-  margin-top: 6px;
-}
-
-.hud-panel-right .hud-rounds { justify-content: flex-end; }
-
-.hud-round {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-}
-
-.hud-round.is-won { background: #f2d24b; }
-
-.hud-clock {
-  position: absolute;
-  top: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  text-align: center;
-}
-
-.hud-clock-time { font-size: 34px; font-weight: bold; line-height: 1; }
-.hud-clock-round { font-size: 12px; opacity: 0.85; }
-
-.hud-announcement {
-  position: absolute;
-  top: 30%;
-  left: 0;
-  width: 100%;
-  text-align: center;
-  font-size: 44px;
-  font-weight: bold;
-  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9);
-}
-
-.hud-dialog {
-  position: absolute;
-  top: 38%;
-  left: 50%;
-  min-width: 300px;
-  transform: translate(-50%, -50%);
-  padding: 18px 24px;
-  display: grid;
-  gap: 10px;
-  justify-items: center;
-  text-align: center;
-  pointer-events: auto;
-  text-shadow: none;
-  background: rgba(20, 20, 24, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-}
-
-.hud-dialog .hud-button { margin-top: 0; }
-.hud-dialog-problem { color: #ff9d96; }
-.hud-result-title { font-size: 36px; font-weight: bold; }
-.hud-result-detail { font-size: 20px; }
-
-.hud-code {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 30px;
-  font-weight: bold;
-  letter-spacing: 4px;
-  user-select: text;
-}
-
-.hud-row { flex-direction: row-reverse; }
+.hud-panel-right .hud-row { flex-direction: row-reverse; }
 
 .hud-name {
   font-size: 14px;
@@ -171,10 +102,13 @@ html, body {
 
 .hud-clock {
   position: absolute;
-  top: 12px;
+  top: 16px;
   left: 50%;
   transform: translateX(-50%);
+  padding: 6px 14px;
   text-align: center;
+  background: rgba(15, 15, 18, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .hud-clock-time { font-size: 34px; font-weight: bold; line-height: 1; }
@@ -257,9 +191,11 @@ html, body {
   position: absolute;
   left: 16px;
   bottom: 16px;
+  padding: 10px 12px;
   font-size: 12px;
   line-height: 1.5;
-  opacity: 0.85;
+  background: rgba(15, 15, 18, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .hud-button {

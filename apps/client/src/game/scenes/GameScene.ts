@@ -1,7 +1,8 @@
+import { Constants } from '@babylonjs/core/Engines/constants';
 import { DirectionalLight } from '@babylonjs/core/Lights/directionalLight';
 import { HemisphericLight } from '@babylonjs/core/Lights/hemisphericLight';
 import { StandardMaterial } from '@babylonjs/core/Materials/standardMaterial';
-import { Texture } from '@babylonjs/core/Materials/Textures/texture';
+import { DynamicTexture } from '@babylonjs/core/Materials/Textures/dynamicTexture';
 import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { CreateBox } from '@babylonjs/core/Meshes/Builders/boxBuilder';
@@ -10,7 +11,7 @@ import { Scene } from '@babylonjs/core/scene';
 import { SkyMaterial } from '@babylonjs/materials/sky';
 import type { Engine as EngineType } from '@babylonjs/core/Engines/engine';
 import type { Mesh as MeshType } from '@babylonjs/core/Meshes/mesh';
-import { STANCES } from '@flowing-fist/content';
+import { STANCES, TRAINING_ARENA } from '@flowing-fist/content';
 import { MatchPhase, NO_WINNER, StunKind, TICK_RATE, getCurrentMove, getMovePhase, tuning } from '@flowing-fist/sim';
 import type { CharacterState, WorldState } from '@flowing-fist/sim';
 import { accountStore } from '../../account/accountStore';
@@ -28,6 +29,14 @@ import { InputController } from '../utils/InputController';
 const CHARACTER_COUNT = 2;
 /** How long "Fight!" stays up once a round starts */
 const FIGHT_ANNOUNCEMENT_TICKS = 45;
+
+/** Side of one floor tile, in world units */
+const TILE_SIZE = 2;
+const TILE_TEXTURE_PIXELS = 256;
+// Neutral warm greys: light enough for the characters and the overlay to stand out against
+const TILE_COLORS = ['#8f8d88', '#858480'];
+const TILE_GROUT_COLOR = '#5f5e5b';
+const TILE_GROUT_PIXELS = 3;
 
 export class GameScene {
     private scene: Scene;
@@ -85,32 +94,55 @@ export class GameScene {
      * Setup the ground with texture
      */
     private setupGround(): void {
-        // Create a large flat ground
-        this.ground = CreateGround(
-            'ground',
-            { width: 100, height: 100, subdivisions: 16 },
-            this.scene
-        );
-        // Create a standard material for the ground
+        const size = TRAINING_ARENA.radius * 2;
+        this.ground = CreateGround('ground', { width: size, height: size, subdivisions: 16 }, this.scene);
+
         const groundMaterial = new StandardMaterial('groundMaterial', this.scene);
+        const tileTexture = this.createTileTexture();
+        // The texture holds two tiles each way
+        tileTexture.uScale = size / (TILE_SIZE * 2);
+        tileTexture.vScale = size / (TILE_SIZE * 2);
+        groundMaterial.diffuseTexture = tileTexture;
 
-        // Create ground texture
-        const groundTexture = new Texture('textures/ground.jpg', this.scene);
-        groundTexture.uScale = 10;
-        groundTexture.vScale = 10;
+        // Stone, not polished: only a faint sheen
+        groundMaterial.specularColor = new Color3(0.08, 0.08, 0.08);
+        groundMaterial.specularPower = 32;
 
-        // Apply texture to the ground material
-        groundMaterial.diffuseTexture = groundTexture;
-
-        // Adjust material properties
-        groundMaterial.specularColor = new Color3(0.2, 0.2, 0.2);
-        groundMaterial.specularPower = 64;
-
-        // Apply material to ground
         this.ground.material = groundMaterial;
-        
-        // Enable collisions for the ground
         this.ground.checkCollisions = true;
+    }
+
+    /**
+     * Draw a two-by-two block of floor tiles in slightly different greys, with grout between them
+     */
+    private createTileTexture(): DynamicTexture {
+        const texture = new DynamicTexture('tileTexture', TILE_TEXTURE_PIXELS, this.scene, true);
+        const context = texture.getContext();
+        const tilePixels = TILE_TEXTURE_PIXELS / 2;
+
+        context.fillStyle = TILE_GROUT_COLOR;
+        context.fillRect(0, 0, TILE_TEXTURE_PIXELS, TILE_TEXTURE_PIXELS);
+
+        for (let row = 0; row < 2; row++) {
+            for (let column = 0; column < 2; column++) {
+                context.fillStyle = TILE_COLORS[(row + column) % 2];
+                context.fillRect(
+                    column * tilePixels + TILE_GROUT_PIXELS / 2,
+                    row * tilePixels + TILE_GROUT_PIXELS / 2,
+                    tilePixels - TILE_GROUT_PIXELS,
+                    tilePixels - TILE_GROUT_PIXELS
+                );
+            }
+        }
+
+        texture.update();
+        // Unlike a loaded texture, a drawn one does not repeat unless told to
+        texture.wrapU = Constants.TEXTURE_WRAP_ADDRESSMODE;
+        texture.wrapV = Constants.TEXTURE_WRAP_ADDRESSMODE;
+        // The floor is seen at a shallow angle, where plain filtering smears the grout lines
+        texture.anisotropicFilteringLevel = 8;
+
+        return texture;
     }
 
     /**
