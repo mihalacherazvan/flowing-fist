@@ -2,7 +2,7 @@
 
 This document describes what each part of the codebase does **today**. It is a living document: update the relevant section in the same change that alters a component. For where the project is heading, see [SPEC.md](SPEC.md); for controls and combat rules, see [GAMEPLAY.md](GAMEPLAY.md).
 
-_Last updated: 2026-10-04, after milestone M5 (match flow)._
+_Last updated: 2026-10-06, after milestone M5 (match flow) and the tiled arena floor._
 
 ## The idea in one paragraph
 
@@ -210,7 +210,7 @@ Babylon.js for rendering, React for the HUD, Vite for bundling.
 | File | Contents |
 |---|---|
 | `src/main.ts` | Creates the engine and scene, mounts the HUD, wires the dev-only inspector (backtick) |
-| `src/game/scenes/GameScene.ts` | Environment, the render loop, and the glue: asks the current session for the world, then updates views, camera, overlay and HUD |
+| `src/game/scenes/GameScene.ts` | Environment (sky, lights, and the floor: stone tiles drawn in code onto a repeating texture, with size and colours as constants at the top of the file), the render loop, and the glue: asks the current session for the world, then updates views, camera, overlay and HUD |
 
 **Sessions** — where the world comes from. The scene draws whichever is active without knowing the difference.
 
@@ -260,7 +260,7 @@ UI code is kept Preact-compatible: function components and hooks only.
 
 **Tests:** `e2e/` holds Playwright tests that run the real game in headless Chromium. In dev builds the scene is exposed as `window.flowingFist` so tests can read the simulation state.
 
-**Current limits:** there are no attack animations, so an attack shows only as the character sliding forward plus the hitbox overlay. Only idle, run and strafe clips exist. The model is drawn mirrored, which is why the strafe clips are swapped in `CharacterView`. A parry is likewise visible only in the overlay and the status text. No sound or effects. The deck editor shows move names and end stances but no timings.
+**Current limits:** there are no attack animations, so an attack shows only as the character sliding forward plus the hitbox overlay. Only idle, run and strafe clips exist. The model is drawn mirrored, which is why the strafe clips are swapped in `CharacterView`. A parry is likewise visible only in the overlay and the status text. A dodge reuses the run and strafe clips slowed down, holding the one it started with for its whole length. No sound or effects. The deck editor shows move names and end stances but no timings. The floor covers the arena as a square and nothing marks the arena's circular edge.
 
 ## tools/assets — asset preparation
 
@@ -270,7 +270,6 @@ Builds the model the game loads from the Mixamo FBX files in `assets-src/`. The 
 |---|---|
 | `build-characters.mjs` | `pnpm assets`: finds Blender, runs the script below for each character folder, then lists the clips in the result |
 | `build-character.py` | Runs inside Blender, in the background: imports the character and each animation file, names each clip after its file, exports one GLB |
-| `strip-animation-meshes.mjs` | Older script that removes the mesh from single-clip GLB files; nothing uses its output |
 
 Neither `assets-src/` nor the built model files are tracked in git.
 

@@ -127,7 +127,3 @@ Make a new folder in `assets-src/` with its own `character.fbx` and `animations/
 | The character slides twice as far, or snaps back at the end of a loop | The clip was downloaded without **In Place** |
 | A clip plays too fast or too slow | It was not downloaded at 60 frames per second |
 | The clip is listed by the build but never plays | Its name is not used in the code; see step 3 |
-
-## Older files
-
-`apps/client/public/models/y-bot/` also holds `animations/`, `clips/` and `y-bot-t-pose.glb` from before this workflow, when files were converted one by one in Blender. The game does not load them. `pnpm --filter @flowing-fist/assets strip` is the script that produced `clips/`. They can be deleted; note that `animations/` (11 MB) is copied into every production build while it is there.

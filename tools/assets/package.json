@@ -4,11 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "build": "node build-characters.mjs",
-    "strip": "node strip-animation-meshes.mjs"
+    "build": "node build-characters.mjs"
   },
   "dependencies": {
-    "@gltf-transform/core": "^4.5.1",
-    "@gltf-transform/functions": "^4.5.1"
+    "@gltf-transform/core": "^4.5.1"
   }
 }
