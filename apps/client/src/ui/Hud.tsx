@@ -123,6 +123,7 @@ export function Hud() {
                 <div data-testid="hud-status"><b>{state.statusLine}</b></div>
                 <div>WASD move · Shift run · Space dodge · F lock on</div>
                 <div>LMB / H attack · RMB / J alternate · L guard (during a wind-up: feint) · K parry</div>
+                <div>Stance: Q front-left · E front-right · Z back-left · C back-right</div>
                 <div>V hitboxes{isTraining && ' · G dummy mode · P pause · . step one tick'}</div>
                 <button
                     className="hud-button"

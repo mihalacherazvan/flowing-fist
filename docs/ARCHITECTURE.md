@@ -2,7 +2,7 @@
 
 This document describes what each part of the codebase does **today**. It is a living document: update the relevant section in the same change that alters a component. For where the project is heading, see [SPEC.md](SPEC.md); for controls and combat rules, see [GAMEPLAY.md](GAMEPLAY.md).
 
-_Last updated: 2026-10-07, after the first attack animations and lock-on steps._
+_Last updated: 2026-10-07, after the first attack animations, lock-on steps and stance-switch keys._
 
 ## The idea in one paragraph
 
@@ -96,7 +96,7 @@ How a tick works: each character first decides what to start (attack, parry, dod
 
 Conventions: yaw 0 faces +Z and positive turns towards +X; distances are world units; durations are ticks.
 
-**Current limits:** hit detection is on the ground plane only (attack height is recorded but unused); the parry is the only defensive style and everyone has it; no manual stance change; no ring-out.
+**Current limits:** hit detection is on the ground plane only (attack height is recorded but unused); the parry is the only defensive style and everyone has it; a manual stance change is instant and free, with no animation of its own; no ring-out.
 
 ## packages/protocol — network messages
 

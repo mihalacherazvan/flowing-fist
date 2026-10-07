@@ -151,6 +151,49 @@ describe('attacks', () => {
     });
 });
 
+describe('stance switch', () => {
+    it('takes the requested stance at once, and the next attack starts from it', () => {
+        const { world, attacker } = createFight(20);
+
+        stepWorld(world, [encodeInput(Button.StanceBackRight, 0, 0, 0)]);
+        expect(STANCES[attacker.stance]).toBe('back-right');
+        expect(attacker.stamina).toBe(MAX_STAMINA);
+
+        stepWorld(world, [ATTACK]);
+        expect(getCurrentMove(attacker)).toBe(move('back-fist'));
+    });
+
+    it('is ignored when an attack starts on the same tick', () => {
+        const { world, attacker } = createFight(20);
+
+        stepWorld(world, [encodeInput(Button.StanceBackLeft | Button.Attack, 0, 0, 0)]);
+        expect(getCurrentMove(attacker)).toBe(move('jab'));
+        expect(STANCES[attacker.stance]).toBe('front-right');
+    });
+
+    it('is ignored during an attack, which still ends in its own stance', () => {
+        const { world, attacker } = createFight(20);
+
+        stepWorld(world, [ATTACK]);
+        stepWorld(world, [encodeInput(Button.StanceBackLeft, 0, 0, 0)]);
+        expect(STANCES[attacker.stance]).toBe('front-right');
+
+        run(world, totalTicks('jab'), NO_INPUT);
+        expect(STANCES[attacker.stance]).toBe('front-left');
+    });
+
+    it('is ignored while stunned', () => {
+        const { world, defender } = createFight(1.2);
+
+        stepWorld(world, [ATTACK]);
+        run(world, move('jab').startupTicks, NO_INPUT);
+        expect(defender.stunTicks).toBeGreaterThan(0);
+
+        stepWorld(world, [NO_INPUT, encodeInput(Button.StanceBackLeft, 0, 0, 0)]);
+        expect(STANCES[defender.stance]).toBe('front-right');
+    });
+});
+
 describe('hits', () => {
     it('damages and stuns a defender in range, once per attack', () => {
         const { world, attacker, defender } = createFight(1.8);

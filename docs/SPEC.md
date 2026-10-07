@@ -60,7 +60,7 @@ flowing-fist/                  (git root; client history moved up and preserved)
 - **Move data (per attack):** start/end stance, startup/active/recovery frames, damage, stamina cost, hit-stun and block-stun, height (high/mid/low), type (horizontal/vertical/thrust), properties (guard break, armour, duck, jump), root-motion curve, hitbox list per active frame, animation clip id.
 - **Resources:** health, stamina (spent by attacks, dodges and guarding; guard breaks at zero).
 - **Defence:** guard, directional dodge, and one style ability at launch (a timed parry). Avoid and absorb styles come later as data plus small sim additions.
-- **Techniques:** feint (cancel during startup for stamina), manual stance change, lock-on targeting with free movement when unlocked.
+- **Techniques:** feint (cancel during startup for stamina), manual stance change (done: instant, on Q/E/Z/C), lock-on targeting with free movement when unlocked.
 - **Match:** first to 3 rounds, round timer, ring-out optional per arena.
 - **Out of scope for v1:** weapons, powers/shards, move learning, gear.
 

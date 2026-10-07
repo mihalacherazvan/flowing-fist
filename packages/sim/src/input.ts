@@ -7,8 +7,20 @@ export const Button = {
     Attack: 1 << 3,
     Alternate: 1 << 4,
     Guard: 1 << 5,
-    Parry: 1 << 6
+    Parry: 1 << 6,
+    StanceFrontRight: 1 << 7,
+    StanceFrontLeft: 1 << 8,
+    StanceBackRight: 1 << 9,
+    StanceBackLeft: 1 << 10
 } as const;
+
+/** The button that switches to each stance, in the order of STANCES */
+export const STANCE_BUTTONS: readonly number[] = [
+    Button.StanceFrontRight,
+    Button.StanceFrontLeft,
+    Button.StanceBackRight,
+    Button.StanceBackLeft
+];
 
 const MOVE_AXIS_MAX = 127;
 const YAW_STEPS = 65536;

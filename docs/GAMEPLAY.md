@@ -2,7 +2,7 @@
 
 How the game plays **today**. Like [ARCHITECTURE.md](ARCHITECTURE.md), this is updated as the game changes; planned features are in [SPEC.md](SPEC.md).
 
-_Last updated: 2026-10-06, after the first attack animations._
+_Last updated: 2026-10-07, after adding the stance-switch keys._
 
 > All combat numbers are placeholders. Attacks, guard, parry, hits and knockouts are animated, but six moves still borrow another move's animation: Cross (shown as a jab), Breaking Elbow (uppercut), Low Kick (roundhouse), Back Fist (hook), Side Kick (push kick) and Spin Kick (flying kick). The hitbox overlay remains the exact truth of what hits (see [Reading the overlay](#reading-the-overlay)).
 
@@ -22,6 +22,7 @@ Click the game once to capture the mouse; press Esc to release it. The click tha
 | Guard | Hold L |
 | Feint | Press L while your attack is still winding up |
 | Parry | K |
+| Switch stance | Q front-left, E front-right, Z back-left, C back-right |
 | Show / hide hitbox overlay (starts hidden) | V |
 | Find a ranked match; cancel a search; leave a finished duel | O |
 | Open the menu: online play, account, deck editor | B (Esc closes it) |
@@ -69,6 +70,10 @@ Every attack starts in one stance and ends in another. Your **deck** decides whi
 5. **Alternate** plays the alternate attack of your current stance, from neutral or queued during another attack. It breaks the chain: afterwards you start a fresh sequence from the new stance.
 
 Your stance changes when an attack finishes. If you are hit mid-attack, you stay in the stance you started in.
+
+### Switching stance by hand
+
+**Q**, **E**, **Z** and **C** put you straight into front-left, front-right, back-left and back-right: the keys sit around W A S D the way the stances sit on the HUD. The switch is instant and costs no stamina, and you can make it while walking, running or guarding. It does nothing while you are attacking, parrying, dodging, stunned or knocked out, and between rounds. Pressed at the same moment as Attack or Alternate, the attack wins: it starts from the stance you were in and the switch is ignored.
 
 While attacking you cannot move, dodge or guard. Each attack steps you forward a little; when locked on, you keep turning towards the opponent until the attack's startup ends.
 

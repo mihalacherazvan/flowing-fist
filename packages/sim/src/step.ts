@@ -1,6 +1,6 @@
 import { TICK_RATE } from './FixedTimestep';
 import { finishMove, getCurrentMove, resetChain, resolveHits, spendStamina, startAttack } from './combat';
-import { Button, EMPTY_INPUT, inputAxisToUnit, inputYawToRadians } from './input';
+import { Button, EMPTY_INPUT, STANCE_BUTTONS, inputAxisToUnit, inputYawToRadians } from './input';
 import type { InputFrame } from './input';
 import { atan2, cos, sin, wrapAngle } from './math';
 import { isFightOn, stepMatch } from './match';
@@ -130,6 +130,12 @@ function stepCharacter(world: WorldState, index: number, input: InputFrame): voi
                 character.dodgeDirectionZ = moveZ / moveLength;
                 character.guarding = false;
                 spendStamina(character, DODGE_STAMINA_COST);
+            }
+
+            // An attack that started this tick keeps the stance it started from
+            const requestedStance = STANCE_BUTTONS.findIndex((button) => (pressedButtons & button) !== 0);
+            if (requestedStance >= 0 && character.moveIndex < 0) {
+                character.stance = requestedStance;
             }
         }
     }

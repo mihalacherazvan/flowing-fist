@@ -257,7 +257,8 @@ describe('DuelAuthority input handling', () => {
         authority.receiveInput(1, { tick: -100000, frames: [encodeInput(0, 1, 0, 0)] });
 
         const [message] = authority.step();
-        expect(message.inputs[0]).toEqual({ buttons: 127, moveX: 127, moveY: 0, yaw: 0 });
+        // 2047 is every button there is: the oversized mask is clamped to it
+        expect(message.inputs[0]).toEqual({ buttons: 2047, moveX: 127, moveY: 0, yaw: 0 });
         expect(message.inputs[1].moveX).toBe(0);
     });
 });
