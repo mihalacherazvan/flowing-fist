@@ -2,7 +2,7 @@
 
 This document describes what each part of the codebase does **today**. It is a living document: update the relevant section in the same change that alters a component. For where the project is heading, see [SPEC.md](SPEC.md); for controls and combat rules, see [GAMEPLAY.md](GAMEPLAY.md).
 
-_Last updated: 2026-10-07, after the first attack animations, lock-on steps and stance-switch keys._
+_Last updated: 2026-10-07, after adding the masked fighter model and the model picker._
 
 ## The idea in one paragraph
 
@@ -226,7 +226,8 @@ Babylon.js for rendering, React for the HUD, Vite for bundling.
 | File | Contents |
 |---|---|
 | `utils/InputController.ts` | Keyboard and mouse state, sampled once per tick into an `InputFrame`; latches short taps so they are not missed |
-| `characters/CharacterView.ts` | Draws one character: loads the model, places it between two ticks, and eases its turn into diagonal movement. Reads simulation state, never writes it |
+| `characters/CharacterView.ts` | Draws one character: loads the model, places it between two ticks, and eases its turn into diagonal movement. `setModel` swaps the model while the game runs. Reads simulation state, never writes it |
+| `characters/characterModelStore.ts` | The list of character models and the one chosen, kept in this browser's storage. Both characters are drawn with it; the choice is not part of the simulation and is not sent to the server |
 | `characters/characterAnimation.ts` | Which clip, at which frame, shows a character's state: the clip of each move and its strike frames, the reactions, guard, parry and locomotion. Plain data and functions, no Babylon |
 | `characters/SkeletonAnimator.ts` | Poses the skeleton from that choice: samples the clips, blends over 0.12 s when a clip changes, and can show one clip from the spine up over another on the legs |
 | `camera/CameraRig.ts` | Orbit camera driven by the locked pointer; starts each session behind the player, and swings behind them while locked on |
@@ -246,7 +247,8 @@ Babylon.js for rendering, React for the HUD, Vite for bundling.
 | `ui/hudStore.ts` | The only link from the fight to the UI: the game publishes plain data, React subscribes; also carries the actions the UI may trigger |
 | `ui/Hud.tsx` | Health and stamina bars, rounds won, round clock, announcements ("Round 2 · 3", "Fight!", "KO"), the lobby and result dialogs, stance indicator, status line, controls help, session switch, menu button |
 | `ui/menuStore.ts` | Whether the menu is open. While it is, `InputController`, `GameScene` and `TrainingSession` ignore the keyboard, so typing does not move the character |
-| `ui/Menu.tsx` | The overlay holding the account panel, the play panel and the deck editor, or a notice when the server is unreachable |
+| `ui/Menu.tsx` | The overlay holding the model picker, the account panel, the play panel and the deck editor, or a notice when the server is unreachable |
+| `ui/ModelPicker.tsx` | The choice of character model; works without the server |
 | `ui/PlayPanel.tsx` | Find a ranked match, create a private duel or join one by code; rating and match history |
 | `ui/AccountPanel.tsx` | Who you are playing as; create account, log in, log out |
 | `ui/DeckEditor.tsx` | Deck list and the slot grid; save, activate, delete |
@@ -260,7 +262,7 @@ UI code is kept Preact-compatible: function components and hooks only.
 
 **Controls:** listed in [GAMEPLAY.md](GAMEPLAY.md). Key bindings live in `InputController.sampleInputFrame`; session and debug keys in `GameScene` and `TrainingSession`.
 
-**Animation.** The simulation decides the frame, never the other way round. An attack's clip is stretched so that its strike lands as the move's startup ends and its last frame as the recovery ends; `chooseAnimation` computes the frame from `moveTick`, so a paused or corrected fight shows the right pose. Stuns and knockouts play forward from the tick they began, which the view has to remember because the simulation only counts them down. Babylon's own animation playback is not used: `SkeletonAnimator` samples the clips' keys itself each frame, which is what allows a frame to be dictated, the upper body to differ from the legs (the guard stays up while walking), the hips to be held in place while the simulation moves the character, and a clip to be shown mirrored (each bone takes the reflected rotation of the bone opposite), which is how the one idle and the one set of steps serve both the left and the right stances.
+**Animation.** The simulation decides the frame, never the other way round. An attack's clip is stretched so that its strike lands as the move's startup ends and its last frame as the recovery ends; `chooseAnimation` computes the frame from `moveTick`, so a paused or corrected fight shows the right pose. Stuns and knockouts play forward from the tick they began, which the view has to remember because the simulation only counts them down. Babylon's own animation playback is not used: `SkeletonAnimator` samples the clips' keys itself each frame, which is what allows a frame to be dictated, the upper body to differ from the legs (the guard stays up while walking), the hips to be held in place while the simulation moves the character, and a clip to be shown mirrored (each bone takes the reflected rotation of the bone opposite), which is how the one idle and the one set of steps serve both the left and the right stances. A layer can also steady the hips (`hipsMotion`): the sideways lock-on steps show only 40% of their clips' dip and turn of the hips, and keep the idle's torso and guard over the stepping legs, because the clips' own bobbing looked restless at fighting pace.
 
 **Tests:** `characterAnimation.test.ts` covers the choice of clip and frame (Vitest, part of `pnpm test`). `e2e/` holds Playwright tests that run the real game in headless Chromium. In dev builds the scene is exposed as `window.flowingFist` so tests can read the simulation state.
 
@@ -272,8 +274,8 @@ Builds the model the game loads from the Mixamo FBX files in `assets-src/`. The 
 
 | File | Contents |
 |---|---|
-| `build-characters.mjs` | `pnpm assets`: finds Blender, runs the script below for each character folder, then lists the clips in the result |
-| `build-character.py` | Runs inside Blender, in the background: imports the character and each animation file, names each clip after its file, exports one GLB |
+| `build-characters.mjs` | `pnpm assets`: finds Blender, runs the script below for each character folder, then lists the clips in the result. A folder with no `animations/` is built with Y Bot's clips |
+| `build-character.py` | Runs inside Blender, in the background: imports the character and each animation file, names each clip after its file, exports one GLB. A character that borrows clips is first fitted to the skeleton they were made for: posed into its rest pose, scaled until its soles touch the ground with the hips at the same height, and re-bound in that pose, so the borrowed clips need no conversion. A clip that was downloaded for a different skeleton (its bones rest differently) is converted frame by frame: each bone's turn against its parent is kept, and the hips' travel is scaled by how tall the two skeletons stand |
 
 Neither `assets-src/` nor the built model files are tracked in git.
 

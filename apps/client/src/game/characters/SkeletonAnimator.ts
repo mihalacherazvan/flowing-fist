@@ -14,6 +14,8 @@ interface Clip {
     rotations: (Animation | null)[];
     hipsPosition: Animation | null;
     hipsStart: Vector3;
+    /** How the hips are turned as the clip starts */
+    hipsStartRotation: Quaternion;
     /** Length in clip frames */
     length: number;
 }
@@ -53,6 +55,7 @@ export class SkeletonAnimator {
     private sampledRotation = new Quaternion();
     private sampledPosition = new Vector3();
     private hipsStart = new Vector3();
+    private hipsStartRotation = new Quaternion();
 
     constructor(animationGroups: AnimationGroup[]) {
         const boneIndexes = new Map<TransformNode, number>();
@@ -71,7 +74,7 @@ export class SkeletonAnimator {
             // The loader starts the first group by itself
             group.stop();
 
-            const clip: Clip = { rotations: [], hipsPosition: null, hipsStart: new Vector3(), length: 0 };
+            const clip: Clip = { rotations: [], hipsPosition: null, hipsStart: new Vector3(), hipsStartRotation: new Quaternion(), length: 0 };
             for (const { target, animation } of group.targetedAnimations) {
                 const keys = animation.getKeys();
                 const framesPerClipFrame = animation.framePerSecond / CLIP_FRAMES_PER_SECOND;
@@ -79,6 +82,7 @@ export class SkeletonAnimator {
 
                 if (animation.targetProperty === 'rotationQuaternion') {
                     clip.rotations[getBoneIndex(target)] = animation;
+                    if (isNamed(target, 'Hips')) clip.hipsStartRotation.copyFrom(keys[0].value);
                 } else if (animation.targetProperty === 'position' && isNamed(target, 'Hips')) {
                     if (this.hipsIndex < 0) this.findHipsUp(target);
                     this.hipsIndex = getBoneIndex(target);
@@ -134,6 +138,15 @@ export class SkeletonAnimator {
                     this.sampledRotation.y = -this.sampledRotation.y;
                     this.sampledRotation.z = -this.sampledRotation.z;
                 }
+                if (index === this.hipsIndex && layer.hipsMotion < 1) {
+                    // Steadied hips turn only part of the way from how the clip starts
+                    const start = this.hipsStartRotation.copyFrom(clip.hipsStartRotation);
+                    if (layer.mirrored) {
+                        start.y = -start.y;
+                        start.z = -start.z;
+                    }
+                    Quaternion.SlerpToRef(start, this.sampledRotation, layer.hipsMotion, this.sampledRotation);
+                }
                 Quaternion.SlerpToRef(this.blendFromRotations[index], this.sampledRotation, region.blend, bone.rotationQuaternion);
             }
 
@@ -144,7 +157,7 @@ export class SkeletonAnimator {
                     // Keep only the rise and fall of the hips
                     const start = this.hipsStart.copyFrom(clip.hipsStart);
                     if (layer.mirrored) start.x = -start.x;
-                    const rise = Vector3.Dot(this.sampledPosition.subtractInPlace(start), this.hipsUp);
+                    const rise = Vector3.Dot(this.sampledPosition.subtractInPlace(start), this.hipsUp) * layer.hipsMotion;
                     this.hipsUp.scaleToRef(rise, this.sampledPosition).addInPlace(start);
                 }
                 Vector3.LerpToRef(this.blendFromHipsPosition, this.sampledPosition, region.blend, bone.position);

@@ -2,7 +2,7 @@
 
 How a character and its animations get from [Mixamo](https://www.mixamo.com) into the game. For what the game does with them, see [ARCHITECTURE.md](ARCHITECTURE.md).
 
-_Last updated: 2026-10-06._
+_Last updated: 2026-10-07._
 
 ## The workflow in short
 
@@ -26,9 +26,15 @@ assets-src/                         Mixamo downloads; not in git
       run-forward.fbx
       ...
 
+  fighter/
+    character.fbx                   a generated character, rigged by Mixamo; no animations/
+                                    folder, so it plays Y Bot's clips
+
 apps/client/public/models/          what the game loads; not in git
   y-bot/
     y-bot-with-animations.glb       built by `pnpm assets`
+  fighter/
+    fighter-with-animations.glb
 ```
 
 Neither folder is tracked in git: Mixamo's licence allows using the assets in a game but not handing them out as files, and the repository is no place for them. **Keep your own backup of `assets-src/`**, because it is the only source the models can be rebuilt from.
@@ -51,7 +57,7 @@ Sign in at mixamo.com with an Adobe account (free).
 
 **Each animation**
 
-1. Keep **Y Bot** as the character (it is shown in the preview). A clip downloaded for another character will not fit the skeleton, and the build refuses it.
+1. Keep **Y Bot** as the character if you can (it is shown in the preview). A clip downloaded with another of our characters selected also works: the build notices that it was made for a different skeleton, converts it and says so. On the character it was downloaded for the result is exact; on the others the feet can end up a few centimetres off the floor, because Mixamo fitted the clip to that one body.
 2. Open **Animations**, search for the clip and select it.
 3. Set the options on the right:
    - **In Place**: tick it whenever it is offered (walks, runs, strafes). The simulation moves the character; a clip that travels by itself would move it twice.
@@ -80,7 +86,8 @@ The clips the game uses today:
 
 | Clip name | Mixamo animation | Notes |
 |---|---|---|
-| `idle` | a fighting idle | Left foot in front. The game mirrors it for the two right stances |
+| `idle-v2` | a fighting idle with the guard up | The idle the game plays. Left foot in front; the game mirrors it for the two right stances. Downloaded with the masked fighter selected, so the build converts it |
+| `idle` | a fighting idle | The first idle, no longer played: it stands taller than the attacks and steps, so the character rose whenever it stopped |
 | `run-forward` | Running | In Place |
 | `run-backward` | Running Backward | In Place |
 | `left-strafe`, `right-strafe` | Left Strafe, Right Strafe | In Place |
@@ -139,13 +146,30 @@ Things to know when adding clips:
 
 ## Adding another character
 
-Make a new folder in `assets-src/` with its own `character.fbx` and `animations/`, downloaded with that character selected in Mixamo. `pnpm assets` builds every folder. The game loads only `y-bot` today; the path is in `CharacterView.ts`.
+A new character does not need its own animations: it plays Y Bot's. What it needs is Mixamo's skeleton, which Mixamo's auto-rigger gives to any humanoid mesh.
+
+1. **Make the mesh** in any tool (the masked fighter came from Midjourney images turned into a mesh by Tripo) and export it **without a skeleton**, as FBX or OBJ. Standing in an A-pose or T-pose.
+2. **Rig it on mixamo.com:** *Upload Character*, place the markers (the groin marker where the legs really split, not at the hem of loose clothing), and choose the **Standard Skeleton (65)**. Preview a few kicks there before going on.
+3. **Download it** with the *T-Pose* animation selected: FBX Binary, With Skin. Save it as `assets-src/<name>/character.fbx`, with no `animations/` folder beside it.
+4. **Run** `pnpm assets`.
+5. **Add it to the game:** one line in `CHARACTER_MODELS` in `apps/client/src/game/characters/characterModelStore.ts`. The first entry is the default; the player picks among them in the menu.
+
+What the build does for such a character, before adding the clips: it poses the skeleton into Y Bot's rest pose, scales the character until its soles touch the ground with the hips at Y Bot's height, and makes that its new rest pose. The file may arrive lying down, in an A-pose and at any size (the fighter was one metre tall); after this it stands, rests in a T-pose and is about Y Bot's size, so every clip means the same on it. A texture is written as JPEG, and a textured material is made matte.
+
+Limits:
+
+- **The skeleton must be Mixamo's.** A rig made by another tool, even one that names its bones like Mixamo's, turns its bones differently and plays the clips twisted. Tripo's own rigger is one of those.
+- **Clips copy joint angles, not hand and foot positions.** A character built much like Y Bot moves like Y Bot; one with far longer arms or a wide body will reach further or pass its arms through its clothes.
+- **Tripo's rigged GLB export is broken** (bones without positions); its FBX export is sound.
+
+A character can still have clips of its own: give its folder an `animations/` folder, downloaded with that character selected in Mixamo, and it is built exactly as Y Bot is.
 
 ## Troubleshooting
 
 | Symptom | Cause |
 |---|---|
-| "its skeleton differs from the character's" | The clip was downloaded with another character selected in Mixamo |
+| "its skeleton has other bones than the character's" | The clip was not made for a Mixamo skeleton with 65 bones |
+| The build prints "Converted ... from another character's skeleton" | Not an error: the clip was downloaded with another character selected in Mixamo and has been refitted |
 | "Blender not found" | Install Blender, or set `BLENDER` to its executable |
 | The character slides twice as far, or snaps back at the end of a loop | The clip was downloaded without **In Place** |
 | A clip plays too fast or too slow | It was not downloaded at 60 frames per second |

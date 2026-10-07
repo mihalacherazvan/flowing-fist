@@ -19,6 +19,7 @@ import { hudStore } from '../../ui/hudStore';
 import type { DuelRequest, HudMatch } from '../../ui/hudStore';
 import { menuStore } from '../../ui/menuStore';
 import { CameraRig } from '../camera/CameraRig';
+import { characterModelStore } from '../characters/characterModelStore';
 import { CharacterView } from '../characters/CharacterView';
 import { CombatDebugOverlay } from '../debug/CombatDebugOverlay';
 import { DuelSession } from '../sessions/DuelSession';
@@ -61,9 +62,12 @@ export class GameScene {
 
         // Create a view per character and the camera that follows the local player
         this.characterViews = [
-            new CharacterView(this.scene, 'first'),
-            new CharacterView(this.scene, 'second')
+            new CharacterView(this.scene, 'first', characterModelStore.getModel()),
+            new CharacterView(this.scene, 'second', characterModelStore.getModel())
         ];
+        characterModelStore.subscribe(() => {
+            this.characterViews.forEach((view) => view.setModel(characterModelStore.getModel()));
+        });
         this.cameraRig = new CameraRig(this.scene, this.input, new Vector3(0, 1, 0));
         this.debugOverlay = new CombatDebugOverlay(this.scene, CHARACTER_COUNT);
 

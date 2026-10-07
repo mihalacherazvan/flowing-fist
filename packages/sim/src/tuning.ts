@@ -2,7 +2,7 @@
 // Combat values are placeholders to be tuned once real animations exist.
 export const WALK_SPEED = 6;
 /** Walking while locked on: slow enough for the stepping animation to keep up */
-export const LOCKED_ON_WALK_SPEED = 3;
+export const LOCKED_ON_WALK_SPEED = 2;
 export const RUN_SPEED = 12;
 export const GUARD_MOVE_SPEED = 3;
 export const DODGE_SPEED = 12;

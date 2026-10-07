@@ -2,7 +2,7 @@
 
 How the game plays **today**. Like [ARCHITECTURE.md](ARCHITECTURE.md), this is updated as the game changes; planned features are in [SPEC.md](SPEC.md).
 
-_Last updated: 2026-10-07, after adding the stance-switch keys._
+_Last updated: 2026-10-07, after adding the masked fighter model._
 
 > All combat numbers are placeholders. Attacks, guard, parry, hits and knockouts are animated, but six moves still borrow another move's animation: Cross (shown as a jab), Breaking Elbow (uppercut), Low Kick (roundhouse), Back Fist (hook), Side Kick (push kick) and Spin Kick (flying kick). The hitbox overlay remains the exact truth of what hits (see [Reading the overlay](#reading-the-overlay)).
 
@@ -25,7 +25,7 @@ Click the game once to capture the mouse; press Esc to release it. The click tha
 | Switch stance | Q front-left, E front-right, Z back-left, C back-right |
 | Show / hide hitbox overlay (starts hidden) | V |
 | Find a ranked match; cancel a search; leave a finished duel | O |
-| Open the menu: online play, account, deck editor | B (Esc closes it) |
+| Open the menu: character model, online play, account, deck editor | B (Esc closes it) |
 
 Training mode only:
 
@@ -37,11 +37,15 @@ Training mode only:
 
 Development builds only: the backtick key opens the Babylon.js inspector.
 
+## Character model
+
+The menu (B) has a **Character model** choice at the top: the **Masked fighter** (the default) or **Y Bot**, the grey test figure the game started with. It changes at once, is remembered by this browser, and works without the server. It is looks only: both fighters are drawn with the model you chose, whatever your opponent chose on their side, and nothing about the fight changes.
+
 ## Moving
 
 - **Walk and run.** Movement is relative to the camera. Running is twice walking speed.
 - **Free movement.** When not locked on, your character faces the way the camera looks whenever you move.
-- **Lock-on.** Your character always faces the opponent, movement becomes circling and stepping in and out with short fighting steps at half walking speed (running with Shift is as fast as ever), and the camera swings behind you. Mouse left/right is ignored while locked on.
+- **Lock-on.** Your character always faces the opponent, movement becomes circling and stepping in and out with short fighting steps at a third of walking speed (running with Shift is as fast as ever), and the camera swings behind you. Mouse left/right is ignored while locked on.
 - **Dodge.** A half-second dash in the direction you were holding when you pressed it; you cannot steer it. It costs 15 stamina, makes you unhittable for its first 0.2 seconds, and cannot be used again for 1 second after it ends.
 - You cannot walk through the opponent or leave the arena.
 

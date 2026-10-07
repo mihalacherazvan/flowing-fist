@@ -1,10 +1,12 @@
 import { ImportMeshAsync } from '@babylonjs/core/Loading/sceneLoader';
+import type { ISceneLoaderAsyncResult } from '@babylonjs/core/Loading/sceneLoader';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import type { Scene } from '@babylonjs/core/scene';
 import type { CharacterState } from '@flowing-fist/sim';
 import { lerpAngle } from '../utils/angles';
 import { chooseAnimation, createAnimationMemory } from './characterAnimation';
+import type { CharacterModel } from './characterModelStore';
 import { BLEND_SECONDS, SkeletonAnimator } from './SkeletonAnimator';
 
 // Import SceneLoader loaders
@@ -27,8 +29,11 @@ export class CharacterView {
     private modelNode: TransformNode;
     private animator: SkeletonAnimator | null = null;
     private animationMemory = createAnimationMemory();
+    private loaded: ISceneLoaderAsyncResult | null = null;
+    /** Counts model changes, so a model that finishes loading after another was asked for is dropped */
+    private modelRequest = 0;
 
-    constructor(private scene: Scene, name: string) {
+    constructor(private scene: Scene, name: string, model: CharacterModel) {
         // Create a root node for the character
         this.rootNode = new TransformNode(`${name}Root`, this.scene);
 
@@ -40,16 +45,24 @@ export class CharacterView {
         // Align feet with ground
         this.modelNode.position.y = -0.9;
 
-        // Load the character model
-        this.loadCharacterModel();
+        this.setModel(model);
     }
 
-    private async loadCharacterModel(): Promise<void> {
+    /**
+     * Draw the character with another model. The one on show stays until the new one has loaded.
+     */
+    public async setModel(model: CharacterModel): Promise<void> {
+        const request = ++this.modelRequest;
+
         try {
-            const importResult = await ImportMeshAsync(
-                'models/y-bot/y-bot-with-animations.glb',
-                this.scene
-            );
+            const importResult = await ImportMeshAsync(model.path, this.scene);
+            if (request !== this.modelRequest) {
+                disposeModel(importResult);
+                return;
+            }
+
+            if (this.loaded) disposeModel(this.loaded);
+            this.loaded = importResult;
 
             // The model faces +Z, which is yaw 0 in the simulation
             importResult.meshes[0].parent = this.modelNode;
@@ -96,4 +109,11 @@ export class CharacterView {
     public getYaw(): number {
         return this.rootNode.rotation.y;
     }
+}
+
+function disposeModel(model: ISceneLoaderAsyncResult): void {
+    model.animationGroups.forEach((group) => group.dispose());
+    model.skeletons.forEach((skeleton) => skeleton.dispose());
+    // The first mesh is the model's root; its materials and textures go with it
+    model.meshes[0].dispose(false, true);
 }

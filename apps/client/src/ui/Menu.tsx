@@ -4,6 +4,7 @@ import { getServerUrl } from '../api/apiClient';
 import { AccountPanel } from './AccountPanel';
 import { DeckEditor } from './DeckEditor';
 import { menuStore } from './menuStore';
+import { ModelPicker } from './ModelPicker';
 import { PlayPanel } from './PlayPanel';
 
 /**
@@ -21,6 +22,8 @@ export function Menu() {
                 <h1>Play online, decks and account</h1>
                 <button className="menu-button" data-testid="menu-close" onClick={() => menuStore.setOpen(false)}>Close (Esc)</button>
             </div>
+
+            <ModelPicker />
 
             {account.status === 'online' && account.account ? (
                 <>

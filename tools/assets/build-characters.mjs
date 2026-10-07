@@ -9,6 +9,8 @@ import { Logger, NodeIO } from '@gltf-transform/core';
 const toolDir = dirname(fileURLToPath(import.meta.url));
 const sourceRoot = join(toolDir, '../../assets-src');
 const modelsDir = join(toolDir, '../../apps/client/public/models');
+// A character folder with no animations/ of its own plays this character's clips
+const CLIP_SOURCE = 'y-bot';
 const WINDOWS_BLENDER_ROOT = '/mnt/c/Program Files/Blender Foundation';
 
 /**
@@ -41,6 +43,7 @@ if (characters.length === 0) throw new Error(`No character folders in ${sourceRo
 
 for (const character of characters) {
     const output = join(modelsDir, character, `${character}-with-animations.glb`);
+    const hasOwnClips = existsSync(join(sourceRoot, character, 'animations'));
 
     const result = spawnSync(blender, [
         '--background',
@@ -48,7 +51,8 @@ for (const character of characters) {
         '--python', toBlenderPath(join(toolDir, 'build-character.py')),
         '--',
         toBlenderPath(join(sourceRoot, character)),
-        toBlenderPath(output)
+        toBlenderPath(output),
+        ...(hasOwnClips ? [] : [toBlenderPath(join(sourceRoot, CLIP_SOURCE))])
     ], { encoding: 'utf8' });
 
     if (result.status !== 0) {
@@ -60,6 +64,10 @@ for (const character of characters) {
     // Reading the result back only lists its clips, so warnings about material extensions are noise
     const document = await new NodeIO().setLogger(new Logger(Logger.Verbosity.ERROR)).read(output);
     console.log(`${character}: wrote ${output}`);
+    // What the script did to make the character and its clips fit each other
+    for (const line of result.stdout.split(/\r?\n/).filter((candidate) => /^(Fitted|Converted) /.test(candidate))) {
+        console.log(`  ${line}`);
+    }
     for (const animation of document.getRoot().listAnimations()) {
         const duration = Math.max(...animation.listSamplers().map((sampler) => sampler.getInput().getMax([])[0]));
         console.log(`  ${animation.getName().padEnd(24)} ${duration.toFixed(2)} s`);

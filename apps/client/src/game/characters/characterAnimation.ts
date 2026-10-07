@@ -17,6 +17,7 @@ type ReactionClip = 'block' | 'parry' | 'hit' | 'hit-body' | 'knockout';
 
 /** A clip in the model file; the name is the file name it was built from */
 export type ClipName = 'idle'
+    | 'idle-v2'
     | 'run-forward'
     | 'run-backward'
     | 'left-strafe'
@@ -37,6 +38,8 @@ export interface AnimationLayer {
     inPlace: boolean;
     /** Show the clip as in a mirror: left and right limbs swapped, sideways travel reversed */
     mirrored: boolean;
+    /** Share of the hips' rise, fall and turning that is shown: 1 is the clip as it is, 0 holds the hips as the clip starts */
+    hipsMotion: number;
 }
 
 export interface CharacterAnimation {
@@ -72,6 +75,9 @@ const KNOCKOUT_REACTION = -1;
 const MOVE_THRESHOLD = 0.38;
 
 /** Where a strike's wind-up starts, where it lands and where the limb is back, in each strike clip */
+// A guard held at the height of the attacks and steps; the first `idle` stood taller and is no longer played
+const IDLE_CLIP: ClipName = 'idle-v2';
+
 const STRIKE_FRAMES: Record<StrikeClip, { start: number; impact: number; end: number }> = {
     'jab': { start: 12, impact: 27, end: 57 },
     'hook': { start: 18, impact: 39, end: 63 },
@@ -110,20 +116,29 @@ const STAGGER_REACTION = { start: 8, end: 76, framesPerTick: 1 };
 const KNOCKOUT_LAST_FRAME = 128;
 /** The arm starts up, is across the body as the parry window closes, and is back down */
 const PARRY_FRAMES = { start: 6, windowEnd: 33, end: 72 };
-// At twice its own pace the forward step covers exactly the 3 units a second of a locked-on
-// or guarded walk. The other steps are shorter and slide a little; any faster looks frantic.
-const STEP_PLAYBACK_SPEED = 2;
+// At twice its own pace the forward step covers 3 units a second. A locked-on walk is 2 and a
+// guarded one 3, so this sits between them. The other steps are shorter and slide a little.
+// The sideways steps dip and turn the hips at every step, which at fighting pace reads as bobbing
+const SIDE_STEP_HIPS_MOTION = 0.4;
+const STEP_PLAYBACK_SPEED = 1.5;
 
 function lerp(from: number, to: number, amount: number): number {
     return from + (to - from) * Math.min(1, Math.max(0, amount));
 }
 
 function held(clip: ClipName, frame: number, inPlace = false): AnimationLayer {
-    return { clip, frame, speed: 1, inPlace, mirrored: false };
+    return { clip, frame, speed: 1, inPlace, mirrored: false, hipsMotion: 1 };
 }
 
-function looping(clip: ClipName, speed: number, options: { inPlace?: boolean; mirrored?: boolean } = {}): AnimationLayer {
-    return { clip, frame: null, speed, inPlace: options.inPlace ?? false, mirrored: options.mirrored ?? false };
+function looping(clip: ClipName, speed: number, options: { inPlace?: boolean; mirrored?: boolean; hipsMotion?: number } = {}): AnimationLayer {
+    return {
+        clip,
+        frame: null,
+        speed,
+        inPlace: options.inPlace ?? false,
+        mirrored: options.mirrored ?? false,
+        hipsMotion: options.hipsMotion ?? 1
+    };
 }
 
 /**
@@ -161,7 +176,7 @@ export function getStrikeFrame(move: MoveDefinition, elapsedTicks: number): numb
 /**
  * Walking while locked on: short steps that keep the body square to the opponent
  */
-function chooseStep(character: CharacterState): AnimationLayer | null {
+function chooseStep(character: CharacterState): { layer: AnimationLayer; upperBody: AnimationLayer | null } | null {
     const isStepping = character.lockedOn && !character.running && character.dodgeTicks === 0;
     if (!isStepping || (character.moveForward === 0 && character.moveRight === 0)) return null;
 
@@ -171,25 +186,34 @@ function chooseStep(character: CharacterState): AnimationLayer | null {
     const isRightwards = (character.moveRight > 0) !== mirrored;
 
     // On a diagonal the steps forward and back win, as the sideways ones cover less ground
-    const clip: ClipName = Math.abs(character.moveForward) >= Math.abs(character.moveRight)
-        ? (character.moveForward > 0 ? 'step-forward' : 'step-backward')
-        : (isRightwards ? 'step-right' : 'step-left');
+    if (Math.abs(character.moveForward) >= Math.abs(character.moveRight)) {
+        const clip: ClipName = character.moveForward > 0 ? 'step-forward' : 'step-backward';
 
-    return looping(clip, STEP_PLAYBACK_SPEED, { inPlace: true, mirrored });
+        return { layer: looping(clip, STEP_PLAYBACK_SPEED, { inPlace: true, mirrored }), upperBody: null };
+    }
+
+    // Circling the opponent: the legs step under a torso that keeps the idle's guard, and the hips are steadied
+    return {
+        layer: looping(isRightwards ? 'step-right' : 'step-left', STEP_PLAYBACK_SPEED, { inPlace: true, mirrored, hipsMotion: SIDE_STEP_HIPS_MOTION }),
+        upperBody: looping(IDLE_CLIP, 1, { mirrored })
+    };
 }
 
-function chooseLocomotion(character: CharacterState, memory: AnimationMemory): { layer: AnimationLayer; twist: number } {
+function chooseLocomotion(
+    character: CharacterState,
+    memory: AnimationMemory
+): { layer: AnimationLayer; upperBody: AnimationLayer | null; twist: number } {
     const step = chooseStep(character);
     if (step) {
         memory.dodgePose = null;
 
-        return { layer: step, twist: 0 };
+        return { ...step, twist: 0 };
     }
 
     const forward = Math.abs(character.moveForward) > MOVE_THRESHOLD ? Math.sign(character.moveForward) : 0;
     const right = Math.abs(character.moveRight) > MOVE_THRESHOLD ? Math.sign(character.moveRight) : 0;
 
-    let clip: ClipName = 'idle';
+    let clip: ClipName = IDLE_CLIP;
     let twist = 0;
 
     if (forward > 0 && right === 0) {
@@ -214,9 +238,9 @@ function chooseLocomotion(character: CharacterState, memory: AnimationMemory): {
 
     const speed = character.running ? 1.5 : character.dodgeTicks > 0 ? 0.3 : 1;
     // The idle stands left foot in front; mirrored, it is the idle of the right stances
-    const mirrored = clip === 'idle' && stanceSide(character) === 'right';
+    const mirrored = clip === IDLE_CLIP && stanceSide(character) === 'right';
 
-    return { layer: looping(clip, speed, { mirrored }), twist };
+    return { layer: looping(clip, speed, { mirrored }), upperBody: null, twist };
 }
 
 /**
@@ -293,5 +317,5 @@ export function chooseAnimation(character: CharacterState, memory: AnimationMemo
         return isMoving ? { body: locomotion.layer, upperBody: guard, twist: locomotion.twist } : fullBody(guard);
     }
 
-    return { body: locomotion.layer, upperBody: null, twist: locomotion.twist };
+    return { body: locomotion.layer, upperBody: locomotion.upperBody, twist: locomotion.twist };
 }
