@@ -2,7 +2,7 @@
 
 This document describes what each part of the codebase does **today**. It is a living document: update the relevant section in the same change that alters a component. For where the project is heading, see [SPEC.md](SPEC.md); for controls and combat rules, see [GAMEPLAY.md](GAMEPLAY.md).
 
-_Last updated: 2026-10-06, after milestone M5 (match flow) and the tiled arena floor._
+_Last updated: 2026-10-07, after the first attack animations and lock-on steps._
 
 ## The idea in one paragraph
 
@@ -42,7 +42,7 @@ client ──┐                ┌── server
 | `pnpm run client` | Vite dev server for the game |
 | `docker compose up -d` | The MariaDB database the server needs, on port 3307 |
 | `pnpm run server` | Colyseus server and HTTP API on port 2567, restarts on change |
-| `pnpm test` | Unit tests (sim, content, netcode) and server tests; the server tests need the database |
+| `pnpm test` | Unit tests (sim, content, netcode, the client's animation choices) and server tests; the server tests need the database |
 | `pnpm test:e2e` | Browser tests; starts its own client and server |
 | `pnpm lint` / `pnpm typecheck` / `pnpm build` | Checks and production client build |
 | `pnpm assets` | Builds the character model from the Mixamo downloads in `assets-src/`; needs Blender |

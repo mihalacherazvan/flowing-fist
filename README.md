@@ -60,7 +60,7 @@ The server's settings can go in `apps/server/.env`; see `apps/server/.env.exampl
 | `pnpm run client` | Vite dev server for the game |
 | `docker compose up -d` | Starts the database (`docker compose down` stops it, keeping the data) |
 | `pnpm run server` | Colyseus server and HTTP API, restarts on change |
-| `pnpm test` | Unit tests (sim, content, netcode) and server tests; needs the database running |
+| `pnpm test` | Unit tests (sim, content, netcode, the client's animation choices) and server tests; needs the database running |
 | `pnpm test:e2e` | Browser tests; starts its own client and server, and needs the database running |
 | `pnpm lint` | ESLint |
 | `pnpm typecheck` | TypeScript checks across all packages |

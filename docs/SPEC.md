@@ -2,7 +2,7 @@
 
 ## Status
 
-_As of 2026-10-04:_ milestones **M0–M5 are done**; **M6 is next**. This document is the plan. What actually exists is described in [ARCHITECTURE.md](ARCHITECTURE.md), how the game plays in [GAMEPLAY.md](GAMEPLAY.md), and how models and animations are made in [ASSETS.md](ASSETS.md).
+_As of 2026-10-07:_ milestones **M0–M5 are done**; **M6 is next**. Since M5 the first animations have gone in (attacks, guard, parry, reactions, lock-on steps), with half of the moves still on borrowed clips. This document is the plan. What actually exists is described in [ARCHITECTURE.md](ARCHITECTURE.md), how the game plays in [GAMEPLAY.md](GAMEPLAY.md), and how models and animations are made in [ASSETS.md](ASSETS.md).
 
 ## Context
 
@@ -21,7 +21,7 @@ The fight is a **deterministic, fixed-tick (60 Hz) simulation written in plain T
 
 - The server runs the same code as the authority; the client runs it for prediction and for the offline training mode.
 - Hit detection uses **data-defined hitboxes/hurtboxes** (capsules and spheres in character-local space, per active frame), not skeleton or mesh collision. The server never loads a GLB or evaluates an animation.
-- Animation is a *view* of sim state: the client sets animation time from the sim's move frame, never the reverse. Root motion is baked into move data at build time.
+- Animation is a *view* of sim state: the client sets animation time from the sim's move frame, never the reverse. Root motion is baked into move data at build time. _(As built so far: a move's forward travel is a hand-set `advance`, and its clip is played in place.)_
 - Arena collision is simple kinematic capsule-vs-bounds in the sim. **No physics engine in the authoritative path**; Havok is optional and client-only (ragdolls, debris).
 
 ## Tech stack
@@ -89,7 +89,7 @@ flowing-fist/                  (git root; client history moved up and preserved)
 - **Sim/view split.** `apps/client/src/game/characters/Player.ts` currently mixes input, movement, camera and animation, with speeds expressed per rendered frame (so movement is frame-rate dependent). It is split into: sim character state (in `packages/sim`), `CharacterView` (mesh, animation blending, VFX), and `CameraRig` (orbit + lock-on).
 - **Input.** `apps/client/src/game/utils/InputController.ts` is kept and extended to emit a per-tick `InputFrame`, with gamepad support and rebinding. Mouse delta must accumulate between reads instead of overwriting.
 - **Fixed-step loop** with render interpolation replaces the per-frame `update()` in `GameScene.ts`.
-- **Animation.** One skinned mesh, animation-only clips retargeted onto it, cross-fades driven by sim state. The current assets embed the full 2.2 MB mesh in each of the five animation files; the pipeline strips that.
+- **Animation.** One skinned mesh, animation-only clips retargeted onto it, cross-fades driven by sim state. _(Built: see "Animation" under the client in ARCHITECTURE.md.)_
 - **Modes:** training (local sim, no server), duel (networked), deck editor, replay viewer (replays are just input logs).
 - **Debug:** hitbox/hurtbox overlay, frame-step, artificial latency and packet loss, rollback counter.
 
@@ -101,7 +101,7 @@ A dev-only **move viewer** page: scrub an animation clip frame by frame, place h
 
 1. **M0 Foundation** (done) — monorepo restructure, Babylon upgrade, lint/test/CI, asset pipeline for animation-only clips. The CI workflow was removed again during M4: checks are run by hand and browser play-testing is manual.
 2. **M1 Sim core** (done) — fixed-tick loop, deterministic math, locomotion and lock-on in `packages/sim`; client ported to sim/view split.
-3. **M2 Offline combat** (done, except the move viewer, which waits for attack animation clips) — stances, attacks, hit/guard/stamina, hitbox overlay, move viewer, 8–12 moves, training dummy.
+3. **M2 Offline combat** (done, except the move viewer; attack clips now exist, and their strike frames were measured from the files instead) — stances, attacks, hit/guard/stamina, hitbox overlay, move viewer, 8–12 moves, training dummy.
 4. **M3 Networked duel** (done, except input delay and a Node-versus-browser determinism test) — `DuelRoom`, input relay, prediction and rollback, snapshots, latency simulation, reconnection.
 5. **M4 Decks and accounts** (done, except OAuth sign-in and the `user_moves` table, which waits for move learning) — auth, database, deck editor UI, server-side deck validation.
 6. **M5 Match flow** (done, except queueing by region and ring-out; round score and timer live in the simulation instead of Colyseus Schema state) — matchmaking, rounds, HUD, results, rating, parry style, feints.
