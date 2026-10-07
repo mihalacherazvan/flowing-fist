@@ -32,13 +32,12 @@ const HITBOX_COLORS = {
 
 /**
  * Draws what the simulation actually tests: each character's body cylinder and
- * the hitboxes of the attack in progress. Until attack animations exist this is
- * also the only way to see an attack.
+ * the hitboxes of the attack in progress. Hidden until toggled.
  */
 export class CombatDebugOverlay {
     private bodies: Mesh[] = [];
     private hitboxes: Mesh[][] = [];
-    private visible: boolean = true;
+    private visible: boolean = false;
 
     constructor(private scene: Scene, characterCount: number) {
         for (let i = 0; i < characterCount; i++) {

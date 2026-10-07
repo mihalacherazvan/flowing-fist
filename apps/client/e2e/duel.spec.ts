@@ -61,7 +61,7 @@ for (const latencyQuery of ['', '?latency=80']) {
         }).toBeLessThan(1.5);
         await firstPage.keyboard.up('KeyW');
 
-        await firstPage.keyboard.press('KeyJ');
+        await firstPage.keyboard.press('KeyH');
 
         // The second player sees themselves get hit
         await expect.poll(async () => (await getCharacters(secondPage))[secondIndex].health).toBeLessThan(100);

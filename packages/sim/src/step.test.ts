@@ -7,7 +7,7 @@ import { PI } from './math';
 import { cloneWorld, createCharacter, createWorld, hashWorld } from './state';
 import type { WorldState } from './state';
 import { stepWorld } from './step';
-import { CHARACTER_RADIUS, DODGE_COOLDOWN_TICKS, DODGE_SPEED, DODGE_TICKS, RUN_SPEED, WALK_SPEED } from './tuning';
+import { CHARACTER_RADIUS, DODGE_COOLDOWN_TICKS, DODGE_SPEED, DODGE_TICKS, LOCKED_ON_WALK_SPEED, RUN_SPEED, WALK_SPEED } from './tuning';
 
 const ARENA_RADIUS = 50;
 
@@ -133,7 +133,8 @@ describe('stepWorld lock-on', () => {
         const expectedYaw = Math.atan2(dummy.x - player.x, dummy.z - player.z);
         run(world, 1, encodeInput(Button.LockOn, 1, 0, 0));
 
-        expect(player.x).toBeGreaterThan(1);
+        // Half a second at the slower locked-on pace
+        expect(player.x).toBeCloseTo(LOCKED_ON_WALK_SPEED / 2, 3);
         expect(player.yaw).toBeCloseTo(expectedYaw, 3);
         expect(player.moveRight).toBeGreaterThan(0.9);
     });

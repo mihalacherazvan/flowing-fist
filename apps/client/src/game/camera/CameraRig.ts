@@ -16,7 +16,7 @@ export class CameraRig {
     constructor(scene: Scene, private input: InputController, target: Vector3) {
         this.camera = new ArcRotateCamera(
             'playerCamera',
-            Math.PI, // Alpha (rotation around Y axis)
+            CameraRig.yawToAlpha(0), // Alpha (rotation around Y axis)
             Math.PI / 2.5, // Beta (rotation around X axis)
             5, // Radius (distance from target)
             target.clone(),
@@ -68,6 +68,13 @@ export class CameraRig {
             // Inverted Y-axis for more natural feel (negative sign)
             this.camera.beta -= deltaY * this.rotationSpeed;
         }
+    }
+
+    /**
+     * Put the camera straight behind a character facing `yaw`, with no swing
+     */
+    public placeBehind(yaw: number): void {
+        this.camera.alpha = CameraRig.yawToAlpha(yaw);
     }
 
     /**

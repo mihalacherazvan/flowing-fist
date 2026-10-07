@@ -2,9 +2,9 @@
 
 How the game plays **today**. Like [ARCHITECTURE.md](ARCHITECTURE.md), this is updated as the game changes; planned features are in [SPEC.md](SPEC.md).
 
-_Last updated: 2026-10-04, after milestone M5 (match flow)._
+_Last updated: 2026-10-06, after the first attack animations._
 
-> All combat numbers are placeholders. There are no attack animations yet, so an attack shows only as your character sliding forward plus the coloured hitbox overlay, and a parry only as a colour in that overlay (see [Reading the overlay](#reading-the-overlay)).
+> All combat numbers are placeholders. Attacks, guard, parry, hits and knockouts are animated, but six moves still borrow another move's animation: Cross (shown as a jab), Breaking Elbow (uppercut), Low Kick (roundhouse), Back Fist (hook), Side Kick (push kick) and Spin Kick (flying kick). The hitbox overlay remains the exact truth of what hits (see [Reading the overlay](#reading-the-overlay)).
 
 ## Controls
 
@@ -17,12 +17,12 @@ Click the game once to capture the mouse; press Esc to release it. The click tha
 | Dodge | Space, while holding a direction |
 | Look around | Mouse (once captured); wheel zooms |
 | Lock on / off | F |
-| Attack | Left mouse button or J |
-| Alternate attack | Right mouse button or K |
-| Guard | Hold Q |
-| Feint | Press Q while your attack is still winding up |
-| Parry | E |
-| Show / hide hitbox overlay | H |
+| Attack | Left mouse button or H |
+| Alternate attack | Right mouse button or J |
+| Guard | Hold L |
+| Feint | Press L while your attack is still winding up |
+| Parry | K |
+| Show / hide hitbox overlay (starts hidden) | V |
 | Find a ranked match; cancel a search; leave a finished duel | O |
 | Open the menu: online play, account, deck editor | B (Esc closes it) |
 
@@ -40,7 +40,7 @@ Development builds only: the backtick key opens the Babylon.js inspector.
 
 - **Walk and run.** Movement is relative to the camera. Running is twice walking speed.
 - **Free movement.** When not locked on, your character faces the way the camera looks whenever you move.
-- **Lock-on.** Your character always faces the opponent, movement becomes circling and stepping in and out, and the camera swings behind you. Mouse left/right is ignored while locked on.
+- **Lock-on.** Your character always faces the opponent, movement becomes circling and stepping in and out with short fighting steps at half walking speed (running with Shift is as fast as ever), and the camera swings behind you. Mouse left/right is ignored while locked on.
 - **Dodge.** A half-second dash in the direction you were holding when you pressed it; you cannot steer it. It costs 15 stamina, makes you unhittable for its first 0.2 seconds, and cannot be used again for 1 second after it ends.
 - You cannot walk through the opponent or leave the arena.
 
@@ -137,7 +137,7 @@ Your display name is what your opponent sees above your health bar.
 
 ## Guarding
 
-- Hold **Q** in neutral. You move at half walking speed and cannot run.
+- Hold **L** in neutral. You move at half walking speed and cannot run.
 - A guard only covers attacks from the **front**. Hits from behind land normally.
 - Blocking costs stamina instead of health (see the move list), stuns you for a shorter time, and pushes you back slightly. Keep holding guard and the rest of a chain is blocked too.
 - **Guard break.** If blocking empties your stamina, or you block a guard-break move (Breaking Elbow), your guard is broken: stamina drops to zero and you are stunned for a full second, open to anything. A guard-break move does no damage to a guard it breaks.
@@ -145,17 +145,17 @@ Your display name is what your opponent sees above your health bar.
 
 ## Feinting
 
-Press **Q** while your attack is still in its startup (the yellow phase in the overlay) and the attack is called off. It must be a fresh press: holding Q from before the attack does nothing.
+Press **L** while your attack is still in its startup (the yellow phase in the overlay) and the attack is called off. It must be a fresh press: holding L from before the attack does nothing.
 
 - It costs 5 stamina on top of what the attack already cost, and needs those 5 to be available.
-- You are back in neutral at once, in the stance you started in, with your chain dropped. Keep Q held and you are guarding from the next tick.
+- You are back in neutral at once, in the stance you started in, with your chain dropped. Keep L held and you are guarding from the next tick.
 - Once the attack is active (red) it can no longer be called off.
 
 The point is to make the opponent react — guard, parry or dodge — to an attack that never comes.
 
 ## Parrying
 
-Press **E** in neutral. A parry lasts half a second (30 ticks) and costs 10 stamina; you cannot move, attack or guard until it is over.
+Press **K** in neutral. A parry lasts half a second (30 ticks) and costs 10 stamina; you cannot move, attack or guard until it is over.
 
 - An attack from the **front** that lands in the parry's first 10 ticks (about 0.17 seconds) is turned aside: you take no damage and no stun, your parry ends on the spot, and the attacker is stunned for 0.75 seconds with their chain dropped. Any attack can be parried, guard-break moves included.
 - An attack that lands after those 10 ticks, or from behind, hits you in full.
@@ -182,7 +182,7 @@ The HUD shows the round clock and round number at the top, a row of three marks 
 
 ## Reading the overlay
 
-Press H to toggle it. It shows exactly what the game tests for hits.
+It is off when the game starts; press V to toggle it. It shows exactly what the game tests for hits.
 
 **Body cylinder** — the area that can be hit, coloured by state:
 
@@ -217,7 +217,7 @@ The game starts here and needs no server. You face a dummy that always turns tow
 - **guard** — holds guard, so you can practise breaking it;
 - **attack** — throws a short sequence every 3 seconds.
 
-There are no rounds in training. To practise the parry, set the dummy to **attack** and press E just before its attack turns red.
+There are no rounds in training. To practise the parry, set the dummy to **attack** and press K just before its attack turns red.
 
 **P** pauses; while paused, **.** advances one tick at a time, which is the way to study an attack's timing with the overlay on.
 
@@ -259,4 +259,4 @@ To feel how it plays on a poor connection, add `?latency=80` to the page address
 
 ## Not in the game yet
 
-Attack and parry animations, rematches, ring-outs, manual stance changes, defensive styles other than the parry, sound and effects, gamepad support.
+Animations of their own for the six moves above, getting up after a knockout, rematches, ring-outs, manual stance changes, defensive styles other than the parry, sound and effects, gamepad support.

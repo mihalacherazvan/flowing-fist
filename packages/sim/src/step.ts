@@ -14,6 +14,7 @@ import {
     DODGE_TICKS,
     FEINT_STAMINA_COST,
     GUARD_MOVE_SPEED,
+    LOCKED_ON_WALK_SPEED,
     MAX_HEALTH,
     MAX_STAMINA,
     PARRY_STAMINA_COST,
@@ -212,7 +213,7 @@ function stepCharacter(world: WorldState, index: number, input: InputFrame): voi
             speed = GUARD_MOVE_SPEED;
         } else {
             character.running = (input.buttons & Button.Run) !== 0;
-            speed = character.running ? RUN_SPEED : WALK_SPEED;
+            speed = character.running ? RUN_SPEED : character.lockedOn ? LOCKED_ON_WALK_SPEED : WALK_SPEED;
         }
     }
 

@@ -149,10 +149,10 @@ export class InputController {
         if (this.isKeyActive('ShiftLeft') || this.isKeyActive('ShiftRight')) buttons |= Button.Run;
         if (this.isKeyActive('Space')) buttons |= Button.Dodge;
         if (this.isKeyActive('KeyF')) buttons |= Button.LockOn;
-        if (this.isKeyActive('mouse0') || this.isKeyActive('KeyJ')) buttons |= Button.Attack;
-        if (this.isKeyActive('mouse2') || this.isKeyActive('KeyK')) buttons |= Button.Alternate;
-        if (this.isKeyActive('KeyQ')) buttons |= Button.Guard;
-        if (this.isKeyActive('KeyE')) buttons |= Button.Parry;
+        if (this.isKeyActive('mouse0') || this.isKeyActive('KeyH')) buttons |= Button.Attack;
+        if (this.isKeyActive('mouse2') || this.isKeyActive('KeyJ')) buttons |= Button.Alternate;
+        if (this.isKeyActive('KeyL')) buttons |= Button.Guard;
+        if (this.isKeyActive('KeyK')) buttons |= Button.Parry;
 
         this.keysPressedSinceSample.clear();
 

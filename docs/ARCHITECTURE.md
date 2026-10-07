@@ -226,9 +226,11 @@ Babylon.js for rendering, React for the HUD, Vite for bundling.
 | File | Contents |
 |---|---|
 | `utils/InputController.ts` | Keyboard and mouse state, sampled once per tick into an `InputFrame`; latches short taps so they are not missed |
-| `characters/CharacterView.ts` | Draws one character: loads the model, places it between two ticks, picks the animation. Reads simulation state, never writes it |
-| `camera/CameraRig.ts` | Orbit camera driven by the locked pointer; swings behind the player while locked on |
-| `debug/CombatDebugOverlay.ts` | Body cylinders and hitbox spheres, coloured by state and attack phase |
+| `characters/CharacterView.ts` | Draws one character: loads the model, places it between two ticks, and eases its turn into diagonal movement. Reads simulation state, never writes it |
+| `characters/characterAnimation.ts` | Which clip, at which frame, shows a character's state: the clip of each move and its strike frames, the reactions, guard, parry and locomotion. Plain data and functions, no Babylon |
+| `characters/SkeletonAnimator.ts` | Poses the skeleton from that choice: samples the clips, blends over 0.12 s when a clip changes, and can show one clip from the spine up over another on the legs |
+| `camera/CameraRig.ts` | Orbit camera driven by the locked pointer; starts each session behind the player, and swings behind them while locked on |
+| `debug/CombatDebugOverlay.ts` | Body cylinders and hitbox spheres, coloured by state and attack phase; hidden until toggled |
 
 **Account and decks**
 
@@ -258,9 +260,11 @@ UI code is kept Preact-compatible: function components and hooks only.
 
 **Controls:** listed in [GAMEPLAY.md](GAMEPLAY.md). Key bindings live in `InputController.sampleInputFrame`; session and debug keys in `GameScene` and `TrainingSession`.
 
-**Tests:** `e2e/` holds Playwright tests that run the real game in headless Chromium. In dev builds the scene is exposed as `window.flowingFist` so tests can read the simulation state.
+**Animation.** The simulation decides the frame, never the other way round. An attack's clip is stretched so that its strike lands as the move's startup ends and its last frame as the recovery ends; `chooseAnimation` computes the frame from `moveTick`, so a paused or corrected fight shows the right pose. Stuns and knockouts play forward from the tick they began, which the view has to remember because the simulation only counts them down. Babylon's own animation playback is not used: `SkeletonAnimator` samples the clips' keys itself each frame, which is what allows a frame to be dictated, the upper body to differ from the legs (the guard stays up while walking), the hips to be held in place while the simulation moves the character, and a clip to be shown mirrored (each bone takes the reflected rotation of the bone opposite), which is how the one idle and the one set of steps serve both the left and the right stances.
 
-**Current limits:** there are no attack animations, so an attack shows only as the character sliding forward plus the hitbox overlay. Only idle, run and strafe clips exist. The model is drawn mirrored, which is why the strafe clips are swapped in `CharacterView`. A parry is likewise visible only in the overlay and the status text. A dodge reuses the run and strafe clips slowed down, holding the one it started with for its whole length. No sound or effects. The deck editor shows move names and end stances but no timings. The floor covers the arena as a square and nothing marks the arena's circular edge.
+**Tests:** `characterAnimation.test.ts` covers the choice of clip and frame (Vitest, part of `pnpm test`). `e2e/` holds Playwright tests that run the real game in headless Chromium. In dev builds the scene is exposed as `window.flowingFist` so tests can read the simulation state.
+
+**Current limits:** six of the twelve moves borrow another move's clip (Cross, Breaking Elbow, Low Kick, Back Fist, Side Kick, Spin Kick), and the strike frames were measured from the clips, not tuned by eye. Clips do not change stance, so the feet swap in the blend after a move that does; the front and back stances look alike. Feet slide where a clip steps and the simulation does not. The backward and sideways lock-on steps cover less ground than the character moves, so they slide a little. A hit reaction is the same wherever the hit landed, and a knocked-out character has no getting-up clip. A dodge reuses the run and strafe clips slowed down, holding the one it started with for its whole length. No sound or effects. The deck editor shows move names and end stances but no timings. The floor covers the arena as a square and nothing marks the arena's circular edge.
 
 ## tools/assets — asset preparation
 

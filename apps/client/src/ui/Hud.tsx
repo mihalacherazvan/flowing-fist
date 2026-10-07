@@ -122,8 +122,8 @@ export function Hud() {
             <div className="hud-help">
                 <div data-testid="hud-status"><b>{state.statusLine}</b></div>
                 <div>WASD move · Shift run · Space dodge · F lock on</div>
-                <div>LMB / J attack · RMB / K alternate · Q guard (during a wind-up: feint) · E parry</div>
-                <div>H hitboxes{isTraining && ' · G dummy mode · P pause · . step one tick'}</div>
+                <div>LMB / H attack · RMB / J alternate · L guard (during a wind-up: feint) · K parry</div>
+                <div>V hitboxes{isTraining && ' · G dummy mode · P pause · . step one tick'}</div>
                 <button
                     className="hud-button"
                     onClick={() => isTraining ? hudStore.actions.startDuel({ kind: 'ranked' }) : hudStore.actions.startTraining()}

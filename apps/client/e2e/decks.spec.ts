@@ -59,7 +59,7 @@ test('deck editor: build a deck, fight with it, keep it across a reload and a re
     await expect(page.getByTestId('menu')).toHaveCount(0);
 
     // Training restarted with the new deck: the first attack is now the hook
-    await page.keyboard.press('KeyJ');
+    await page.keyboard.press('KeyH');
     await expect.poll(async () => (await getPlayer(page)).stance).toBe(BACK_RIGHT);
 
     // The deck belongs to the guest account, which the browser remembers

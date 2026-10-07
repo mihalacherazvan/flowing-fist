@@ -1,27 +1,21 @@
-import type { AnimationGroup } from '@babylonjs/core/Animations/animationGroup';
 import { ImportMeshAsync } from '@babylonjs/core/Loading/sceneLoader';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
-import type { AbstractMesh } from '@babylonjs/core/Meshes/abstractMesh';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import type { Scene } from '@babylonjs/core/scene';
 import type { CharacterState } from '@flowing-fist/sim';
 import { lerpAngle } from '../utils/angles';
+import { chooseAnimation, createAnimationMemory } from './characterAnimation';
+import { BLEND_SECONDS, SkeletonAnimator } from './SkeletonAnimator';
 
 // Import SceneLoader loaders
 import '@babylonjs/core/Animations/animatable';
 import '@babylonjs/loaders/glTF';
 
-type AnimationNames = 'idle'
-    | 'run-forward'
-    | 'run-backward'
-    | 'left-strafe'
-    | 'right-strafe';
-
-// Below this the character counts as not moving along that axis. It is the sine
-// of 22.5 degrees, so a direction within that angle of straight sideways is a strafe
-// and one within it of straight ahead is a run; anything between is a diagonal.
-const MOVE_THRESHOLD = 0.38;
 const ROOT_HEIGHT = 1;
+// The model is about 1.8 units tall as built; the simulation's sizes assume 2.7
+const MODEL_SCALE = 1.5;
+// The model turns into a diagonal in the time a clip takes to blend in, so the two arrive together
+const TWIST_SPEED = Math.PI / 4 / BLEND_SECONDS;
 
 /**
  * Draws one simulated character: model, placement and animation.
@@ -29,16 +23,22 @@ const ROOT_HEIGHT = 1;
  */
 export class CharacterView {
     private rootNode: TransformNode;
-    private mesh: AbstractMesh | null = null;
-    private animations: Map<AnimationNames, AnimationGroup> = new Map();
-    private currentAnimationName?: AnimationNames;
-    private currentAnimation?: AnimationGroup;
-    /** The animation and model twist chosen when the dodge in progress began; null when not dodging */
-    private dodgePose: { animationName: AnimationNames; twist: number } | null = null;
+    /** Holds the loaded model: its size, its height above the root and its twist */
+    private modelNode: TransformNode;
+    private animator: SkeletonAnimator | null = null;
+    private animationMemory = createAnimationMemory();
 
     constructor(private scene: Scene, name: string) {
         // Create a root node for the character
         this.rootNode = new TransformNode(`${name}Root`, this.scene);
+
+        // The loader turns the model the right way round for this scene on the model's own
+        // root, so size and placement go on a node above it rather than overwriting that
+        this.modelNode = new TransformNode(`${name}Model`, this.scene);
+        this.modelNode.parent = this.rootNode;
+        this.modelNode.scaling.setAll(MODEL_SCALE);
+        // Align feet with ground
+        this.modelNode.position.y = -0.9;
 
         // Load the character model
         this.loadCharacterModel();
@@ -51,28 +51,10 @@ export class CharacterView {
                 this.scene
             );
 
-            // Get the root mesh
-            const importedMesh = importResult.meshes[0];
-
-            // Scale and position the model
-            importedMesh.scaling = new Vector3(1.5, 1.5, 1.5); // Slightly larger scale
-
-            // Adjust position to align feet with ground
-            importedMesh.position = new Vector3(0, -0.9, 0);
-
             // The model faces +Z, which is yaw 0 in the simulation
-            importedMesh.rotation = new Vector3(0, 0, 0);
+            importResult.meshes[0].parent = this.modelNode;
 
-            // Parent the model to our root node
-            importedMesh.parent = this.rootNode;
-
-            this.mesh = importedMesh;
-
-            // The loader auto-plays the first group, so stop everything before taking control
-            importResult.animationGroups.forEach((animGroup) => {
-                animGroup.stop();
-                this.animations.set(animGroup.name as AnimationNames, animGroup);
-            });
+            this.animator = new SkeletonAnimator(importResult.animationGroups);
         } catch (e) {
             console.error(e);
         }
@@ -81,9 +63,11 @@ export class CharacterView {
     /**
      * Place and animate the character between two simulation ticks
      *
+     * @param tick  the world tick `current` belongs to
      * @param alpha 0 shows the previous tick, 1 the current one
+     * @param elapsedSeconds time since the previous frame was drawn
      */
-    public update(previous: CharacterState, current: CharacterState, alpha: number): void {
+    public update(previous: CharacterState, current: CharacterState, tick: number, alpha: number, elapsedSeconds: number): void {
         this.rootNode.position.set(
             previous.x + (current.x - previous.x) * alpha,
             ROOT_HEIGHT,
@@ -91,74 +75,12 @@ export class CharacterView {
         );
         this.rootNode.rotation.y = lerpAngle(previous.yaw, current.yaw, alpha);
 
-        this.updateAnimations(current);
-    }
-
-    /**
-     * Update character animations based on movement state
-     */
-    private updateAnimations(state: CharacterState): void {
-        // Only update animations if the model is loaded
-        if (!this.mesh) return;
-
-        const forward = Math.abs(state.moveForward) > MOVE_THRESHOLD ? Math.sign(state.moveForward) : 0;
-        const right = Math.abs(state.moveRight) > MOVE_THRESHOLD ? Math.sign(state.moveRight) : 0;
-
-        let animationName: AnimationNames = 'idle';
-        // Extra turn of the model so diagonal movement leans into the direction of travel
-        let twist = 0;
-
-        if (forward > 0 && right === 0) {
-            animationName = 'run-forward';
-        } else if (forward < 0) {
-            animationName = 'run-backward';
-            twist = -right * Math.PI / 4;
-        } else if (right !== 0) {
-            // The model is drawn mirrored (its handedness flip is dropped when the
-            // scaling is set above), so the strafe clips are swapped
-            animationName = right > 0 ? 'left-strafe' : 'right-strafe';
-            twist = forward > 0 ? -right * Math.PI / 4 : 0;
-        }
-
-        // A dodge keeps its direction while the character may keep turning (towards a
-        // locked-on opponent, say), so its direction relative to the facing drifts.
-        // Hold the pose it started with rather than sliding into another animation.
-        if (state.dodgeTicks === 0) {
-            this.dodgePose = null;
-        } else {
-            this.dodgePose ??= { animationName, twist };
-            ({ animationName, twist } = this.dodgePose);
-        }
-
-        this.mesh.rotation.y = twist;
-        this.playAnimation(animationName, state);
-    }
-
-    private playAnimation(animationName: AnimationNames, state: CharacterState): void {
-        if (this.currentAnimation) {
-            if (state.running) {
-                this.currentAnimation.speedRatio = 1.5;
-            } else if (state.dodgeTicks > 0) {
-                this.currentAnimation.speedRatio = 0.3;
-            } else {
-                this.currentAnimation.speedRatio = 1;
-            }
-        }
-
-        if (!this.animations.has(animationName) || animationName === this.currentAnimationName) {
-            return;
-        }
-
-        if (this.currentAnimation) {
-            this.currentAnimation.stop();
-        }
-
-        this.currentAnimation = this.animations.get(animationName);
-        this.currentAnimationName = animationName;
-
-        if (this.currentAnimation) {
-            this.currentAnimation.start(true);
-        }
+        const animation = chooseAnimation(current, this.animationMemory, tick, alpha);
+        const twistLeft = animation.twist - this.modelNode.rotation.y;
+        const twistStep = TWIST_SPEED * elapsedSeconds;
+        this.modelNode.rotation.y += Math.min(twistStep, Math.max(-twistStep, twistLeft));
+        // Nothing to pose until the model has loaded
+        this.animator?.update(animation, elapsedSeconds);
     }
 
     /**

@@ -91,7 +91,7 @@ test('training mode: hit the dummy, then have it block', async ({ page }) => {
     }).toBeLessThan(1.3);
     await page.keyboard.up('KeyW');
 
-    await page.keyboard.press('KeyJ');
+    await page.keyboard.press('KeyH');
     await expect.poll(async () => (await getCharacters(page))[1].health).toBeLessThan(100);
     await expect(page.getByTestId('hud-right')).toContainText('Hit');
 
@@ -101,7 +101,7 @@ test('training mode: hit the dummy, then have it block', async ({ page }) => {
     await expect.poll(async () => (await getCharacters(page))[1].guarding).toBe(true);
 
     const healthBeforeBlock = (await getCharacters(page))[1].health;
-    await page.keyboard.press('KeyJ');
+    await page.keyboard.press('KeyH');
     await expect.poll(async () => (await getCharacters(page))[1].stamina).toBeLessThan(100);
     expect((await getCharacters(page))[1].health).toBe(healthBeforeBlock);
 

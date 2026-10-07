@@ -46,6 +46,8 @@ export class GameScene {
     private characterViews: CharacterView[];
     private cameraRig: CameraRig;
     private debugOverlay: CombatDebugOverlay;
+    /** The session and player the camera was last put behind; a change of either is a new fight */
+    private cameraPlacement: { session: GameSession; playerIndex: number } | null = null;
 
     constructor(private engine: EngineType, private canvas: HTMLCanvasElement) {
         // Create the scene
@@ -210,7 +212,7 @@ export class GameScene {
                 return;
             }
 
-            if (event.code === 'KeyH') this.debugOverlay.toggle();
+            if (event.code === 'KeyV') this.debugOverlay.toggle();
             if (event.code === 'KeyB') menuStore.setOpen(true);
             if (event.code === 'KeyO') {
                 if (this.session.mode === 'training') {
@@ -258,12 +260,17 @@ export class GameScene {
         // Blend between the last two ticks so rendering stays smooth at any frame rate
         const alpha = this.session.getAlpha();
         this.characterViews.forEach((view, index) => {
-            view.update(previousWorld.characters[index], world.characters[index], alpha);
+            view.update(previousWorld.characters[index], world.characters[index], world.tick, alpha, elapsedMs / 1000);
         });
         this.debugOverlay.update(world);
 
         const playerIndex = this.session.getLocalPlayerIndex();
         const playerView = this.characterViews[playerIndex];
+        // A duel only learns which fighter is the player's once the server has answered
+        if (this.cameraPlacement?.session !== this.session || this.cameraPlacement.playerIndex !== playerIndex) {
+            this.cameraPlacement = { session: this.session, playerIndex };
+            this.cameraRig.placeBehind(world.characters[playerIndex].yaw);
+        }
         const isLockedOn = world.characters[playerIndex].lockedOn;
         this.cameraRig.update(playerView.getPosition(), isLockedOn ? playerView.getYaw() : null);
 
