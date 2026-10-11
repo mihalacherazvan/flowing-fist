@@ -118,8 +118,8 @@ const KNOCKOUT_LAST_FRAME = 128;
 const PARRY_FRAMES = { start: 6, windowEnd: 33, end: 72 };
 // At twice its own pace the forward step covers 3 units a second. A locked-on walk is 2 and a
 // guarded one 3, so this sits between them. The other steps are shorter and slide a little.
-// The sideways steps dip and turn the hips at every step, which at fighting pace reads as bobbing
-const SIDE_STEP_HIPS_MOTION = 0.4;
+// The steps dip and turn the hips at every step, which at fighting pace reads as bobbing
+const STEP_HIPS_MOTION = 0.4;
 const STEP_PLAYBACK_SPEED = 1.5;
 
 function lerp(from: number, to: number, amount: number): number {
@@ -184,17 +184,16 @@ function chooseStep(character: CharacterState): { layer: AnimationLayer; upperBo
     // and a mirrored step to the left travels right
     const mirrored = stanceSide(character) === 'right';
     const isRightwards = (character.moveRight > 0) !== mirrored;
+    let clip: ClipName = isRightwards ? 'step-right' : 'step-left';
 
     // On a diagonal the steps forward and back win, as the sideways ones cover less ground
     if (Math.abs(character.moveForward) >= Math.abs(character.moveRight)) {
-        const clip: ClipName = character.moveForward > 0 ? 'step-forward' : 'step-backward';
-
-        return { layer: looping(clip, STEP_PLAYBACK_SPEED, { inPlace: true, mirrored }), upperBody: null };
+        clip = character.moveForward > 0 ? 'step-forward' : 'step-backward';
     }
 
-    // Circling the opponent: the legs step under a torso that keeps the idle's guard, and the hips are steadied
+    // The legs step under a torso that keeps the idle's guard, and the hips are steadied
     return {
-        layer: looping(isRightwards ? 'step-right' : 'step-left', STEP_PLAYBACK_SPEED, { inPlace: true, mirrored, hipsMotion: SIDE_STEP_HIPS_MOTION }),
+        layer: looping(clip, STEP_PLAYBACK_SPEED, { inPlace: true, mirrored, hipsMotion: STEP_HIPS_MOTION }),
         upperBody: looping(IDLE_CLIP, 1, { mirrored })
     };
 }

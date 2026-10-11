@@ -44,7 +44,7 @@ describe('chooseAnimation', () => {
     it('steps instead of running while locked on, without turning into diagonals', () => {
         const circling = chooseAnimation(character({ stance: 1, lockedOn: true, moveRight: -1 }), createAnimationMemory(), 10, 1);
         expect(circling.body).toMatchObject({ clip: 'step-left', frame: null, inPlace: true, mirrored: false });
-        // Sideways the torso keeps the idle's guard over steadied hips
+        // The torso keeps the idle's guard over steadied hips
         expect(circling.body.hipsMotion).toBeLessThan(1);
         expect(circling.upperBody).toMatchObject({ clip: 'idle-v2', mirrored: false });
 
@@ -54,8 +54,8 @@ describe('chooseAnimation', () => {
 
         const diagonal = chooseAnimation(character({ lockedOn: true, moveRight: 0.7, moveForward: -0.7 }), createAnimationMemory(), 10, 1);
         expect(diagonal.body.clip).toBe('step-backward');
-        expect(diagonal.body.hipsMotion).toBe(1);
-        expect(diagonal.upperBody).toBeNull();
+        expect(diagonal.body.hipsMotion).toBeLessThan(1);
+        expect(diagonal.upperBody).toMatchObject({ clip: 'idle-v2', mirrored: true });
         expect(diagonal.twist).toBe(0);
 
         const running = chooseAnimation(character({ lockedOn: true, moveForward: 1, running: true }), createAnimationMemory(), 10, 1);
