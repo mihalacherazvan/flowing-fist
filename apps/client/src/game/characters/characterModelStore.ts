@@ -10,6 +10,7 @@ export interface CharacterModel {
 /** The first one is used until the player picks another */
 export const CHARACTER_MODELS: readonly CharacterModel[] = [
     { id: 'fighter', name: 'Masked fighter', path: 'models/fighter/fighter-with-animations.glb' },
+    { id: 'fighter-v2', name: 'Masked fighter v2', path: 'models/fighter-v2/fighter-v2-with-animations.glb' },
     { id: 'y-bot', name: 'Y Bot', path: 'models/y-bot/y-bot-with-animations.glb' }
 ];
 

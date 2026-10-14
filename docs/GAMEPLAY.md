@@ -39,7 +39,7 @@ Development builds only: the backtick key opens the Babylon.js inspector.
 
 ## Character model
 
-The menu (B) has a **Character model** choice at the top: the **Masked fighter** (the default) or **Y Bot**, the grey test figure the game started with. It changes at once, is remembered by this browser, and works without the server. It is looks only: both fighters are drawn with the model you chose, whatever your opponent chose on their side, and nothing about the fight changes.
+The menu (B) has a **Character model** choice at the top: the **Masked fighter** (the default), the **Masked fighter v2** or **Y Bot**, the grey test figure the game started with. It changes at once, is remembered by this browser, and works without the server. It is looks only: both fighters, the training dummy included, are drawn with the model you chose, whatever your opponent chose on their side, and nothing about the fight changes.
 
 ## Moving
 

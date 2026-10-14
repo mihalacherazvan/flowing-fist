@@ -89,8 +89,9 @@ def fit_to_skeleton(armature, objects, reference_path):
     """
     reference_objects = import_fbx(reference_path)
     reference = find_armature(reference_objects, reference_path)
-    if set(reference.data.bones.keys()) != set(armature.data.bones.keys()):
-        raise RuntimeError(f'{character_path.name}: its skeleton has other bones than the one in {reference_path}')
+    # Fewer bones are fine: Mixamo's smaller skeletons leave out fingers, which then keep still against the hand
+    if not set(armature.data.bones.keys()) <= set(reference.data.bones.keys()):
+        raise RuntimeError(f'{character_path.name}: its skeleton has bones that the one in {reference_path} lacks')
 
     meshes = [candidate for candidate in objects if candidate.type == 'MESH']
     armature.matrix_world = reference.matrix_world.copy()
@@ -154,6 +155,27 @@ def rests_alike(first, second):
     )
 
 
+def curve_collections(action):
+    """The action's collections of curves. Blender 5 keeps them in channel bags, one per thing the action animates."""
+    if hasattr(action, 'fcurves'):
+        return [action.fcurves]
+
+    return [bag.fcurves for layer in action.layers for strip in layer.strips for bag in strip.channelbags]
+
+
+def curves_of(action):
+    return [curve for curves in curve_collections(action) for curve in curves]
+
+
+def remove_curves_of_missing_bones(action, armature):
+    """Drop the keys of bones the character lacks, which the exporter would warn about one by one."""
+    for curves in curve_collections(action):
+        for curve in list(curves):
+            match = re.match(r'pose\.bones\["(.+?)"\]', curve.data_path)
+            if match and match.group(1) not in armature.data.bones:
+                curves.remove(curve)
+
+
 def convert_clip(action, clip_armature, armature, clip_path):
     """Rewrite a clip made for another character's skeleton so that it plays on this one.
 
@@ -203,7 +225,7 @@ def convert_clip(action, clip_armature, armature, clip_path):
             rotations[name][frame] = rotation
 
     keyed = set()
-    for curve in action.fcurves:
+    for curve in curves_of(action):
         match = re.fullmatch(r'pose\.bones\["(.+)"\]\.(\w+)', curve.data_path)
         if not match or match.group(1) not in rotations:
             continue
@@ -277,12 +299,14 @@ for clip_path in clip_paths:
     imported = import_fbx(clip_path)
     clip_armature = find_armature(imported, clip_path)
 
-    if set(clip_armature.data.bones.keys()) != set(armature.data.bones.keys()):
-        raise RuntimeError(f'{clip_path.name}: its skeleton has other bones than the character\'s; it has to be a Mixamo skeleton')
+    # A clip may move bones the character lacks (fingers, on Mixamo's smaller skeletons); those keys move nothing
+    if not set(armature.data.bones.keys()) <= set(clip_armature.data.bones.keys()):
+        raise RuntimeError(f'{clip_path.name}: its skeleton lacks bones the character has; it has to be a Mixamo skeleton')
 
     action = clip_armature.animation_data.action
-    if not rests_alike(clip_armature, armature):
+    if not rests_alike(armature, clip_armature):
         convert_clip(action, clip_armature, armature, clip_path)
+    remove_curves_of_missing_bones(action, armature)
     action.name = clip_path.stem
     # Keep the action alive once the skeleton it arrived on is deleted
     action.use_fake_user = True

@@ -29,12 +29,16 @@ assets-src/                         Mixamo downloads; not in git
   fighter/
     character.fbx                   a generated character, rigged by Mixamo; no animations/
                                     folder, so it plays Y Bot's clips
+  fighter-v2/
+    character.fbx                   a second generated character, built the same way
 
 apps/client/public/models/          what the game loads; not in git
   y-bot/
     y-bot-with-animations.glb       built by `pnpm assets`
   fighter/
     fighter-with-animations.glb
+  fighter-v2/
+    fighter-v2-with-animations.glb
 ```
 
 Neither folder is tracked in git: Mixamo's licence allows using the assets in a game but not handing them out as files, and the repository is no place for them. **Keep your own backup of `assets-src/`**, because it is the only source the models can be rebuilt from.
@@ -117,7 +121,7 @@ pnpm assets
 
 For every folder in `assets-src/` this writes `apps/client/public/models/<character>/<character>-with-animations.glb` and lists the clips it contains with their lengths. Check the list: a missing or misnamed clip shows there.
 
-It needs **Blender 4.4 or later**. The script looks for it in this order: the `BLENDER` environment variable, `blender` on the `PATH`, then a Windows installation under `C:\Program Files\Blender Foundation` when run from WSL.
+It needs **Blender 4.4 or later** (run with 4.4 and with 5.2). The script looks for it in this order: the `BLENDER` environment variable, `blender` on the `PATH`, then a Windows installation under `C:\Program Files\Blender Foundation` when run from WSL.
 
 What the build does (`tools/assets/build-character.py`, run inside Blender by `tools/assets/build-characters.mjs`):
 
@@ -149,7 +153,7 @@ Things to know when adding clips:
 A new character does not need its own animations: it plays Y Bot's. What it needs is Mixamo's skeleton, which Mixamo's auto-rigger gives to any humanoid mesh.
 
 1. **Make the mesh** in any tool (the masked fighter came from Midjourney images turned into a mesh by Tripo) and export it **without a skeleton**, as FBX or OBJ. Standing in an A-pose or T-pose.
-2. **Rig it on mixamo.com:** *Upload Character*, place the markers (the groin marker where the legs really split, not at the hem of loose clothing), and choose the **Standard Skeleton (65)**. Preview a few kicks there before going on.
+2. **Rig it on mixamo.com:** *Upload Character*, place the markers (the groin marker where the legs really split, not at the hem of loose clothing), and choose the **Standard Skeleton (65)**. Preview a few kicks there before going on. A smaller skeleton builds too, but the fingers it leaves out stay as they rest: the second masked fighter has only its index fingers, so its hands stay open where the clips make a fist.
 3. **Download it** with the *T-Pose* animation selected: FBX Binary, With Skin. Save it as `assets-src/<name>/character.fbx`, with no `animations/` folder beside it.
 4. **Run** `pnpm assets`.
 5. **Add it to the game:** one line in `CHARACTER_MODELS` in `apps/client/src/game/characters/characterModelStore.ts`. The first entry is the default; the player picks among them in the menu.
@@ -168,7 +172,7 @@ A character can still have clips of its own: give its folder an `animations/` fo
 
 | Symptom | Cause |
 |---|---|
-| "its skeleton has other bones than the character's" | The clip was not made for a Mixamo skeleton with 65 bones |
+| "its skeleton lacks bones the character has" or "has bones that the one in ... lacks" | The clip or the character was not made with a Mixamo skeleton |
 | The build prints "Converted ... from another character's skeleton" | Not an error: the clip was downloaded with another character selected in Mixamo and has been refitted |
 | "Blender not found" | Install Blender, or set `BLENDER` to its executable |
 | The character slides twice as far, or snaps back at the end of a loop | The clip was downloaded without **In Place** |

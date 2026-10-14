@@ -36,7 +36,7 @@ Training mode needs only the client. Everything else needs the server and the da
 
 ### Character model
 
-The model files are not in the repository. The game loads one GLB per character from `apps/client/public/models/` (the masked fighter by default, Y Bot as the other choice in the menu), which `pnpm assets` builds from Mixamo downloads placed in `assets-src/`. It needs Blender 4.4 or later.
+The model files are not in the repository. The game loads one GLB per character from `apps/client/public/models/` (the masked fighter by default, with a second masked fighter and Y Bot as the other choices in the menu), which `pnpm assets` builds from Mixamo downloads placed in `assets-src/`. It needs Blender 4.4 or later.
 
 [docs/ASSETS.md](docs/ASSETS.md) has the whole workflow: what to download from Mixamo and with which settings, where to put it, and how to add a new animation.
 
