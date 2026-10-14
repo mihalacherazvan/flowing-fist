@@ -62,6 +62,8 @@ export interface CharacterState {
     moveHasHit: boolean;
     /** Attack pressed during the current one, a QueuedAttack value */
     queuedAttack: number;
+    /** The attack was pressed before the gold link window opened, which forfeits the gold link */
+    queuedEarly: boolean;
     /** Stance whose sequence is being played, -1 when no chain is running */
     chainStance: number;
     /** Position of the next attack in that sequence */
@@ -136,6 +138,7 @@ export function createCharacter(x: number, z: number, yaw: number): CharacterSta
         moveTick: 0,
         moveHasHit: false,
         queuedAttack: QueuedAttack.None,
+        queuedEarly: false,
         chainStance: -1,
         chainIndex: 0,
         stunTicks: 0,

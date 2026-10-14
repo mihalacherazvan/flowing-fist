@@ -59,7 +59,7 @@ What can exist in a fight, independent of how it is simulated.
 | File | Contents |
 |---|---|
 | `stances.ts` | The four stances, in a fixed order the simulation indexes into |
-| `moves.ts` | `MoveDefinition` and the move list: stances, startup/active/recovery ticks, damage, stamina cost, stun, hitboxes, forward advance |
+| `moves.ts` | `MoveDefinition` and the move list: stances, startup/active/recovery ticks, the gold link window, damage, stamina cost, stun, hitboxes, forward advance |
 | `decks.ts` | `CombatDeck` (per stance: a sequence of up to 3 moves and one alternate), `parseDeck`, `validateDeck`, and the default deck |
 | `arenas.ts` | Arena definitions (currently one circular arena) |
 
@@ -78,7 +78,7 @@ Takes a world state and one input per character, and produces the next world sta
 | `state.ts` | `CharacterState`, `MatchState` and `WorldState` (plain numbers and booleans), `createWorld`, `cloneWorld`, `hashWorld`, deck compilation |
 | `input.ts` | `InputFrame` (button bitmask, quantised movement axes and camera yaw — all integers), `encodeInput`, `sanitiseInput` |
 | `step.ts` | `stepWorld`: one tick of locomotion, dodge, lock-on, guard, parry, feint, attack progression, character separation and arena bounds |
-| `combat.ts` | Starting and chaining attacks, hit detection, applying hits, guard and guard break, parried attacks, knockout |
+| `combat.ts` | Starting and chaining attacks, gold link timing (`getLinkTiming`, `canGoldLink`), hit detection, applying hits, guard and guard break, parried attacks, knockout |
 | `match.ts` | Rounds: `createMatchWorld`, the countdown, the round clock, deciding a round and the match, resetting the fighters between rounds |
 | `math.ts` | Own `sin`, `cos`, `atan2` |
 | `tuning.ts` | Speeds, stamina, stun and timing constants |
@@ -263,6 +263,8 @@ UI code is kept Preact-compatible: function components and hooks only.
 **Controls:** listed in [GAMEPLAY.md](GAMEPLAY.md). Key bindings live in `InputController.sampleInputFrame`; session and debug keys in `GameScene` and `TrainingSession`.
 
 **Animation.** The simulation decides the frame, never the other way round. An attack's clip is stretched so that its strike lands as the move's startup ends and its last frame as the recovery ends; `chooseAnimation` computes the frame from `moveTick`, so a paused or corrected fight shows the right pose. Stuns and knockouts play forward from the tick they began, which the view has to remember because the simulation only counts them down. Babylon's own animation playback is not used: `SkeletonAnimator` samples the clips' keys itself each frame, which is what allows a frame to be dictated, the upper body to differ from the legs (the guard stays up while walking), the hips to be held in place while the simulation moves the character, and a clip to be shown mirrored (each bone takes the reflected rotation of the bone opposite), which is how the one idle and the one set of steps serve both the left and the right stances. A layer can also steady the hips (`hipsMotion`): the lock-on steps, in every direction, show only 40% of their clips' dip and turn of the hips, and keep the idle's torso and guard over the stepping legs, because the clips' own bobbing looked restless at fighting pace.
+
+**Gold link cue.** `CharacterView` lays a gold overlay (`renderOverlay`, which needs `@babylonjs/core/Rendering/outlineRenderer` imported) over the model's meshes while `canGoldLink` is true for the character's state. It reads only simulation state, so it shows for both fighters and follows prediction. A gold link moves on to the next clip before the current one has reached its last frame; the usual blend between clips covers the jump.
 
 **Tests:** `characterAnimation.test.ts` covers the choice of clip and frame (Vitest, part of `pnpm test`). `e2e/` holds Playwright tests that run the real game in headless Chromium. In dev builds the scene is exposed as `window.flowingFist` so tests can read the simulation state.
 

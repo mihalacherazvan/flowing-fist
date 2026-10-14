@@ -68,12 +68,23 @@ Every attack starts in one stance and ends in another. Your **deck** decides whi
 ### How attacks chain
 
 1. Press **Attack** in neutral: you play the first attack of your current stance's sequence.
-2. Press **Attack** again *during* that attack: the next attack in the same sequence is queued and starts when the current one has fully finished.
+2. Press **Attack** again *during* that attack: the next attack in the same sequence is queued and starts when the current one has fully finished, or sooner with a [gold link](#gold-link).
 3. When the sequence runs out and you keep pressing, you start the sequence of the stance you are now in.
 4. If you stop pressing, the chain is dropped. Your next attack starts from the first attack of whatever stance you ended in.
 5. **Alternate** plays the alternate attack of your current stance, from neutral or queued during another attack. It breaks the chain: afterwards you start a fresh sequence from the new stance.
 
 Your stance changes when an attack finishes. If you are hit mid-attack, you stay in the stance you started in.
+
+### Gold link
+
+Late in every attack's recovery there is a short **gold link window**, shown by the attacker glowing gold. Press Attack or Alternate inside it and the rest of the recovery is cut: the next attack starts on that very tick.
+
+- **Too early** (any time before the window opens): the press still chains, but the next attack waits for the full recovery. It also forfeits the gold link for that attack: pressing again inside the window does not help, and the glow does not appear. Mashing therefore never gold links.
+- **Too late** (after the window, before the attack ends): the next attack waits for the full recovery.
+- For every move for now, the window opens 9 ticks before the recovery ends and stays open for 4 ticks, so a perfectly timed press saves 9 ticks (0.15 seconds) and the last tick of the window saves 6.
+- A gold link costs the same stamina as any other chained attack. Without enough stamina you return to neutral in the attack's end stance, also on that tick.
+
+The training dummy presses too early, so it never gold links.
 
 ### Switching stance by hand
 
@@ -96,7 +107,7 @@ Mashing Attack from the start therefore goes: Jab, Cross, Hook (now back-right),
 
 ### Move list
 
-Timings are in ticks; 60 ticks is one second. *Startup* is the wind-up before the attack can hit, *active* is when it can hit, *recovery* is the wait afterwards.
+Timings are in ticks; 60 ticks is one second. *Startup* is the wind-up before the attack can hit, *active* is when it can hit, *recovery* is the wait afterwards, which a [gold link](#gold-link) cuts short.
 
 | Move | Stance change | Startup / active / recovery | Damage | Stamina | Stamina taken if blocked |
 |---|---|---|---|---|---|

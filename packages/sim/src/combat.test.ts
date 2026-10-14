@@ -151,6 +151,95 @@ describe('attacks', () => {
     });
 });
 
+describe('gold link', () => {
+    const jab = move('jab');
+    // jab's gold link window, counted in ticks of jab already played
+    const goldTick = jab.startupTicks + jab.activeTicks + jab.goldLinkStartTick;
+    const lateTick = goldTick + jab.goldLinkTicks;
+
+    function playUntil(world: WorldState, character: CharacterState, moveTick: number): void {
+        while (character.moveTick < moveTick) {
+            stepWorld(world, [NO_INPUT]);
+        }
+    }
+
+    /**
+     * Start a jab, press at each of the given points of it, and count the ticks until the
+     * next move has played its first tick
+     */
+    function ticksUntilNextMove(pressTicks: number[], press: InputFrame = ATTACK): { ticks: number; attacker: CharacterState } {
+        const { world, attacker } = createFight(20);
+        const startTick = world.tick;
+        stepWorld(world, [ATTACK]);
+
+        for (const pressTick of pressTicks) {
+            playUntil(world, attacker, pressTick);
+            stepWorld(world, [press]);
+        }
+        while (getCurrentMove(attacker) === jab || attacker.moveTick === 0) {
+            stepWorld(world, [NO_INPUT]);
+        }
+
+        return { ticks: world.tick - startTick, attacker };
+    }
+
+    it('cuts the rest of recovery when the press lands in the window', () => {
+        const gold = ticksUntilNextMove([goldTick]);
+        const late = ticksUntilNextMove([lateTick]);
+
+        expect(getCurrentMove(gold.attacker)).toBe(move('cross'));
+        expect(getCurrentMove(late.attacker)).toBe(move('cross'));
+        expect(late.ticks).toBe(totalTicks('jab') + 1);
+        expect(gold.ticks).toBe(goldTick + 1);
+        expect(late.ticks - gold.ticks).toBe(jab.recoveryTicks - jab.goldLinkStartTick);
+    });
+
+    it('stays open for the whole window', () => {
+        const lastGold = ticksUntilNextMove([lateTick - 1]);
+
+        expect(lastGold.ticks).toBe(lateTick);
+    });
+
+    it('is forfeited by a press before the window, even with another press inside it', () => {
+        const early = ticksUntilNextMove([2, goldTick]);
+
+        expect(getCurrentMove(early.attacker)).toBe(move('cross'));
+        expect(early.ticks).toBe(totalTicks('jab') + 1);
+    });
+
+    it('carries on through the sequence', () => {
+        const { world, attacker } = createFight(20);
+        stepWorld(world, [ATTACK]);
+        playUntil(world, attacker, goldTick);
+        stepWorld(world, [ATTACK]);
+        expect(getCurrentMove(attacker)).toBe(move('cross'));
+
+        const cross = move('cross');
+        playUntil(world, attacker, cross.startupTicks + cross.activeTicks + cross.goldLinkStartTick);
+        stepWorld(world, [ATTACK]);
+        expect(getCurrentMove(attacker)).toBe(move('hook'));
+        expect(attacker.queuedEarly).toBe(false);
+    });
+
+    it('works into the alternate attack of the end stance', () => {
+        const gold = ticksUntilNextMove([goldTick], ALTERNATE);
+
+        expect(getCurrentMove(gold.attacker)).toBe(move('uppercut'));
+        expect(gold.ticks).toBe(goldTick + 1);
+    });
+
+    it('returns to neutral in the end stance when there is not enough stamina', () => {
+        const { world, attacker } = createFight(20);
+        stepWorld(world, [ATTACK]);
+        attacker.stamina = move('cross').staminaCost - 1;
+
+        playUntil(world, attacker, goldTick);
+        stepWorld(world, [ATTACK]);
+        expect(getCurrentMove(attacker)).toBeNull();
+        expect(STANCES[attacker.stance]).toBe(jab.endStance);
+    });
+});
+
 describe('stance switch', () => {
     it('takes the requested stance at once, and the next attack starts from it', () => {
         const { world, attacker } = createFight(20);

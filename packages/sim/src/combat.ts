@@ -19,6 +19,9 @@ import {
 
 export type MovePhase = 'startup' | 'active' | 'recovery';
 
+/** When a press lands relative to the gold link window */
+export type LinkTiming = 'early' | 'gold' | 'late';
+
 export function getCurrentMove(character: CharacterState): MoveDefinition | null {
     return character.moveIndex >= 0 ? MOVE_LIST[character.moveIndex] : null;
 }
@@ -36,6 +39,28 @@ export function getMovePhase(character: CharacterState): MovePhase | null {
     if (playedTick < move.startupTicks + move.activeTicks) return 'active';
 
     return 'recovery';
+}
+
+/**
+ * Where a press made now falls against the move's gold link window
+ *
+ * @param moveTick ticks of the move already played, so the press is judged on the tick about to play
+ */
+export function getLinkTiming(move: MoveDefinition, moveTick: number): LinkTiming {
+    const recoveryTick = moveTick - move.startupTicks - move.activeTicks;
+    if (recoveryTick < move.goldLinkStartTick) return 'early';
+    if (recoveryTick < move.goldLinkStartTick + move.goldLinkTicks) return 'gold';
+
+    return 'late';
+}
+
+/**
+ * Whether a press now would gold link: the window is open and no early press has forfeited it
+ */
+export function canGoldLink(character: CharacterState): boolean {
+    const move = getCurrentMove(character);
+
+    return move !== null && !character.queuedEarly && getLinkTiming(move, character.moveTick) === 'gold';
 }
 
 /**
@@ -61,6 +86,7 @@ export function resetChain(character: CharacterState): void {
     character.moveTick = 0;
     character.moveHasHit = false;
     character.queuedAttack = QueuedAttack.None;
+    character.queuedEarly = false;
     character.chainStance = -1;
     character.chainIndex = 0;
 }
@@ -112,6 +138,7 @@ export function startAttack(
     character.moveTick = 0;
     character.moveHasHit = false;
     character.queuedAttack = QueuedAttack.None;
+    character.queuedEarly = false;
     character.chainStance = chainStance;
     character.chainIndex = chainIndex;
     character.guarding = false;

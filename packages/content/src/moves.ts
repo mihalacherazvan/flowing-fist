@@ -23,6 +23,10 @@ export interface MoveDefinition {
     activeTicks: number;
     /** Ticks after the hitboxes switch off before the character can act */
     recoveryTicks: number;
+    /** Ticks into recovery at which the gold link window opens */
+    goldLinkStartTick: number;
+    /** How long the gold link window stays open. A press in it cuts the rest of recovery. */
+    goldLinkTicks: number;
     damage: number;
     staminaCost: number;
     /** Stamina taken from a defender who blocks */
@@ -49,6 +53,8 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         startupTicks: 8,
         activeTicks: 3,
         recoveryTicks: 14,
+        goldLinkStartTick: 5,
+        goldLinkTicks: 4,
         damage: 6,
         staminaCost: 8,
         guardDamage: 8,
@@ -67,6 +73,8 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         startupTicks: 14,
         activeTicks: 4,
         recoveryTicks: 20,
+        goldLinkStartTick: 11,
+        goldLinkTicks: 4,
         damage: 11,
         staminaCost: 13,
         guardDamage: 14,
@@ -85,6 +93,8 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         startupTicks: 22,
         activeTicks: 4,
         recoveryTicks: 26,
+        goldLinkStartTick: 17,
+        goldLinkTicks: 4,
         damage: 10,
         staminaCost: 16,
         guardDamage: 0,
@@ -103,6 +113,8 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         startupTicks: 10,
         activeTicks: 3,
         recoveryTicks: 16,
+        goldLinkStartTick: 7,
+        goldLinkTicks: 4,
         damage: 8,
         staminaCost: 10,
         guardDamage: 10,
@@ -121,6 +133,8 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         startupTicks: 13,
         activeTicks: 4,
         recoveryTicks: 18,
+        goldLinkStartTick: 9,
+        goldLinkTicks: 4,
         damage: 9,
         staminaCost: 11,
         guardDamage: 10,
@@ -139,6 +153,8 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         startupTicks: 15,
         activeTicks: 4,
         recoveryTicks: 22,
+        goldLinkStartTick: 13,
+        goldLinkTicks: 4,
         damage: 12,
         staminaCost: 14,
         guardDamage: 14,
@@ -157,6 +173,8 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         startupTicks: 11,
         activeTicks: 3,
         recoveryTicks: 16,
+        goldLinkStartTick: 7,
+        goldLinkTicks: 4,
         damage: 8,
         staminaCost: 10,
         guardDamage: 10,
@@ -175,6 +193,8 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         startupTicks: 18,
         activeTicks: 5,
         recoveryTicks: 24,
+        goldLinkStartTick: 15,
+        goldLinkTicks: 4,
         damage: 14,
         staminaCost: 16,
         guardDamage: 18,
@@ -196,6 +216,8 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         startupTicks: 14,
         activeTicks: 4,
         recoveryTicks: 20,
+        goldLinkStartTick: 11,
+        goldLinkTicks: 4,
         damage: 9,
         staminaCost: 12,
         guardDamage: 14,
@@ -214,6 +236,8 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         startupTicks: 16,
         activeTicks: 4,
         recoveryTicks: 22,
+        goldLinkStartTick: 13,
+        goldLinkTicks: 4,
         damage: 13,
         staminaCost: 15,
         guardDamage: 16,
@@ -232,6 +256,8 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         startupTicks: 20,
         activeTicks: 5,
         recoveryTicks: 26,
+        goldLinkStartTick: 17,
+        goldLinkTicks: 4,
         damage: 16,
         staminaCost: 18,
         guardDamage: 20,
@@ -253,6 +279,8 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         startupTicks: 17,
         activeTicks: 5,
         recoveryTicks: 24,
+        goldLinkStartTick: 15,
+        goldLinkTicks: 4,
         damage: 10,
         staminaCost: 13,
         guardDamage: 12,

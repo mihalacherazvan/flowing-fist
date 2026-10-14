@@ -1,5 +1,5 @@
 import { TICK_RATE } from './FixedTimestep';
-import { finishMove, getCurrentMove, resetChain, resolveHits, spendStamina, startAttack } from './combat';
+import { canGoldLink, finishMove, getCurrentMove, getLinkTiming, resetChain, resolveHits, spendStamina, startAttack } from './combat';
 import { Button, EMPTY_INPUT, STANCE_BUTTONS, inputAxisToUnit, inputYawToRadians } from './input';
 import type { InputFrame } from './input';
 import { atan2, cos, sin, wrapAngle } from './math';
@@ -148,6 +148,12 @@ function stepCharacter(world: WorldState, index: number, input: InputFrame): voi
     let isLocomotion = false;
     character.running = false;
 
+    // A gold link cuts the rest of recovery, and the next attack plays its first tick right away
+    if (requestedAttack !== QueuedAttack.None && canGoldLink(character)) {
+        character.queuedAttack = requestedAttack;
+        finishMove(character, deck);
+    }
+
     const move = getCurrentMove(character);
 
     // A feint: pressing guard while an attack is still winding up calls it off
@@ -180,6 +186,10 @@ function stepCharacter(world: WorldState, index: number, input: InputFrame): voi
         resetChain(character);
     } else if (move) {
         if (requestedAttack !== QueuedAttack.None && character.moveTick > 0) {
+            // Pressing too early still chains, but only once recovery has played out in full
+            if (getLinkTiming(move, character.moveTick) === 'early') {
+                character.queuedEarly = true;
+            }
             character.queuedAttack = requestedAttack;
         }
 

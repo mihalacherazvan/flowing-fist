@@ -1,8 +1,10 @@
 import { ImportMeshAsync } from '@babylonjs/core/Loading/sceneLoader';
 import type { ISceneLoaderAsyncResult } from '@babylonjs/core/Loading/sceneLoader';
+import { Color3 } from '@babylonjs/core/Maths/math.color';
 import { Vector3 } from '@babylonjs/core/Maths/math.vector';
 import { TransformNode } from '@babylonjs/core/Meshes/transformNode';
 import type { Scene } from '@babylonjs/core/scene';
+import { canGoldLink } from '@flowing-fist/sim';
 import type { CharacterState } from '@flowing-fist/sim';
 import { lerpAngle } from '../utils/angles';
 import { chooseAnimation, createAnimationMemory } from './characterAnimation';
@@ -12,12 +14,17 @@ import { BLEND_SECONDS, SkeletonAnimator } from './SkeletonAnimator';
 // Import SceneLoader loaders
 import '@babylonjs/core/Animations/animatable';
 import '@babylonjs/loaders/glTF';
+// Registers the renderer that draws mesh overlays, used for the gold link cue
+import '@babylonjs/core/Rendering/outlineRenderer';
 
 const ROOT_HEIGHT = 1;
 // The model is about 1.8 units tall as built; the simulation's sizes assume 2.7
 const MODEL_SCALE = 1.5;
 // The model turns into a diagonal in the time a clip takes to blend in, so the two arrive together
 const TWIST_SPEED = Math.PI / 4 / BLEND_SECONDS;
+// Laid over the model while a press would gold link
+const GOLD_LINK_COLOR = new Color3(1, 0.78, 0.2);
+const GOLD_LINK_ALPHA = 0.45;
 
 /**
  * Draws one simulated character: model, placement and animation.
@@ -32,6 +39,7 @@ export class CharacterView {
     private loaded: ISceneLoaderAsyncResult | null = null;
     /** Counts model changes, so a model that finishes loading after another was asked for is dropped */
     private modelRequest = 0;
+    private isGoldLinkShown = false;
 
     constructor(private scene: Scene, name: string, model: CharacterModel) {
         // Create a root node for the character
@@ -68,6 +76,7 @@ export class CharacterView {
             importResult.meshes[0].parent = this.modelNode;
 
             this.animator = new SkeletonAnimator(importResult.animationGroups);
+            this.showGoldLink(this.isGoldLinkShown);
         } catch (e) {
             console.error(e);
         }
@@ -94,6 +103,24 @@ export class CharacterView {
         this.modelNode.rotation.y += Math.min(twistStep, Math.max(-twistStep, twistLeft));
         // Nothing to pose until the model has loaded
         this.animator?.update(animation, elapsedSeconds);
+
+        const canGoldLinkNow = canGoldLink(current);
+        if (canGoldLinkNow !== this.isGoldLinkShown) {
+            this.showGoldLink(canGoldLinkNow);
+        }
+    }
+
+    /**
+     * Turn the gold overlay on or off. It is remembered, so a model loaded later gets it too.
+     */
+    private showGoldLink(isShown: boolean): void {
+        this.isGoldLinkShown = isShown;
+
+        for (const mesh of this.loaded?.meshes ?? []) {
+            mesh.renderOverlay = isShown;
+            mesh.overlayColor = GOLD_LINK_COLOR;
+            mesh.overlayAlpha = GOLD_LINK_ALPHA;
+        }
     }
 
     /**

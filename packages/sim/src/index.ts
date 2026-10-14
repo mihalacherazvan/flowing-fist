@@ -1,6 +1,6 @@
 export { TICK_RATE, TICK_MS, FixedTimestep } from './FixedTimestep';
-export { getCurrentMove, getHitboxPosition, getMovePhase } from './combat';
-export type { MovePhase } from './combat';
+export { canGoldLink, getCurrentMove, getHitboxPosition, getLinkTiming, getMovePhase } from './combat';
+export type { LinkTiming, MovePhase } from './combat';
 export { Button, EMPTY_INPUT, encodeInput, inputYawToRadians, sanitiseInput } from './input';
 export type { InputFrame } from './input';
 export { PI, TAU, atan2, cos, sin, wrapAngle } from './math';
