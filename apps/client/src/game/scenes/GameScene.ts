@@ -256,7 +256,7 @@ export class GameScene {
      * Advance the session, then draw the world it produced
      */
     private update(elapsedMs: number): void {
-        this.session.update(elapsedMs, () => this.input.sampleInputFrame(this.cameraRig.getYaw()));
+        this.session.update(elapsedMs, () => this.input.sampleInputFrame(this.getMovementYaw()));
 
         const world = this.session.getWorld();
         const previousWorld = this.session.getPreviousWorld();
@@ -279,6 +279,16 @@ export class GameScene {
         this.cameraRig.update(playerView.getPosition(), isLockedOn ? playerView.getYaw() : null);
 
         this.publishHud(world);
+    }
+
+    /**
+     * Yaw the movement keys are relative to: the camera's, except while locked on,
+     * where the camera looks from the side and forward has to mean towards the opponent
+     */
+    private getMovementYaw(): number {
+        const player = this.session.getWorld().characters[this.session.getLocalPlayerIndex()];
+
+        return player.lockedOn ? player.yaw : this.cameraRig.getYaw();
     }
 
     private publishHud(world: WorldState): void {

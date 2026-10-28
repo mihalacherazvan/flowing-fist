@@ -230,7 +230,7 @@ Babylon.js for rendering, React for the HUD, Vite for bundling.
 | `characters/characterModelStore.ts` | The list of character models and the one chosen, kept in this browser's storage. Both characters are drawn with it; the choice is not part of the simulation and is not sent to the server |
 | `characters/characterAnimation.ts` | Which clip, at which frame, shows a character's state: the clip of each move and its strike frames, the reactions, guard, parry and locomotion. Plain data and functions, no Babylon |
 | `characters/SkeletonAnimator.ts` | Poses the skeleton from that choice: samples the clips, blends over 0.12 s when a clip changes, and can show one clip from the spine up over another on the legs |
-| `camera/CameraRig.ts` | Orbit camera driven by the locked pointer; starts each session behind the player, and swings behind them while locked on |
+| `camera/CameraRig.ts` | Orbit camera driven by the locked pointer; starts each session behind the player; while locked on, swings behind them and 45° to the side the camera already leaned to, shifting the view so the player stands on the side away from the opponent. `GameScene` then sends the player's facing instead of the camera's yaw as the movement direction, so forward still means towards the opponent |
 | `debug/CombatDebugOverlay.ts` | Body cylinders and hitbox spheres, coloured by state and attack phase; hidden until toggled |
 
 **Account and decks**

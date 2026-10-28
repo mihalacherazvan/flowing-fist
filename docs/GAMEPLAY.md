@@ -39,13 +39,13 @@ Development builds only: the backtick key opens the Babylon.js inspector.
 
 ## Character model
 
-The menu (B) has a **Character model** choice at the top: the **Masked fighter** (the default), the **Masked fighter v2** or **Y Bot**, the grey test figure the game started with. It changes at once, is remembered by this browser, and works without the server. It is looks only: both fighters, the training dummy included, are drawn with the model you chose, whatever your opponent chose on their side, and nothing about the fight changes.
+The menu (B) has a **Character model** choice at the top: the **Masked fighter** (the default), the **Masked fighter v2**, the **Tang tunic cat** or **Y Bot**, the grey test figure the game started with. It changes at once, is remembered by this browser, and works without the server. It is looks only: both fighters, the training dummy included, are drawn with the model you chose, whatever your opponent chose on their side, and nothing about the fight changes.
 
 ## Moving
 
 - **Walk and run.** Movement is relative to the camera. Running is twice walking speed.
 - **Free movement.** When not locked on, your character faces the way the camera looks whenever you move.
-- **Lock-on.** Your character always faces the opponent, movement becomes circling and stepping in and out with short fighting steps at a third of walking speed (running with Shift is as fast as ever), and the camera swings behind you. Mouse left/right is ignored while locked on.
+- **Lock-on.** Your character always faces the opponent, movement becomes circling and stepping in and out with short fighting steps at a third of walking speed (running with Shift is as fast as ever), and the camera swings behind you and 45° to one side, so you stand at the edge of the view and the opponent is in the open beside you. It keeps to the side it already leaned to when you locked on (straight behind: you on the right, the opponent on the left). Forward and back keep meaning towards and away from the opponent, whatever the camera's angle. Mouse left/right is ignored while locked on.
 - **Dodge.** A half-second dash in the direction you were holding when you pressed it; you cannot steer it. It costs 15 stamina, makes you unhittable for its first 0.2 seconds, and cannot be used again for 1 second after it ends.
 - You cannot walk through the opponent or leave the arena.
 
