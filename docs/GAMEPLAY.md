@@ -34,6 +34,7 @@ Training mode only:
 | Change dummy behaviour (stand → guard → attack) | G |
 | Pause / resume | P |
 | Advance one tick while paused | . |
+| Slow motion (1× → 0.5× → 0.25×) | T |
 
 Development builds only: the backtick key opens the Babylon.js inspector.
 
@@ -45,7 +46,7 @@ The menu (B) has a **Character model** choice at the top: the **Masked fighter**
 
 - **Walk and run.** Movement is relative to the camera. Running is twice walking speed.
 - **Free movement.** When not locked on, your character faces the way the camera looks whenever you move.
-- **Lock-on.** Your character always faces the opponent, movement becomes circling and stepping in and out with short fighting steps at a third of walking speed (running with Shift is as fast as ever), and the camera swings behind you and 45° to one side, so you stand at the edge of the view and the opponent is in the open beside you. It keeps to the side it already leaned to when you locked on (straight behind: you on the right, the opponent on the left). Forward and back keep meaning towards and away from the opponent, whatever the camera's angle. Mouse left/right is ignored while locked on.
+- **Lock-on.** Your character always faces the opponent, movement becomes circling and stepping in and out with short fighting steps at a third of walking speed (running with Shift is as fast as ever), and the camera swings round over about three quarters of a second to behind you and 45° to one side, so you stand at the edge of the view and the opponent is in the open beside you. It keeps to the side it already leaned to when you locked on (straight behind: you on the right, the opponent on the left). Forward and back keep meaning towards and away from the opponent, whatever the camera's angle. Mouse left/right is ignored while locked on.
 - **Dodge.** A half-second dash in the direction you were holding when you pressed it; you cannot steer it. It costs 15 stamina, makes you unhittable for its first 0.2 seconds, and cannot be used again for 1 second after it ends.
 - You cannot walk through the opponent or leave the arena.
 
@@ -77,11 +78,15 @@ Your stance changes when an attack finishes. If you are hit mid-attack, you stay
 
 ### Gold link
 
-Late in every attack's recovery there is a short **gold link window**, shown by the attacker glowing gold. Press Attack or Alternate inside it and the rest of the recovery is cut: the next attack starts on that very tick.
+Late in every attack's recovery there is a short **gold link window**, shown by the attacker glowing gold. Press Attack or Alternate inside it and the rest of the recovery is cut: the next attack starts on that very tick. This follows Absolver, where a gold link saves at most 9 frames.
 
 - **Too early** (any time before the window opens): the press still chains, but the next attack waits for the full recovery. It also forfeits the gold link for that attack: pressing again inside the window does not help, and the glow does not appear. Mashing therefore never gold links.
 - **Too late** (after the window, before the attack ends): the next attack waits for the full recovery.
 - For every move for now, the window opens 9 ticks before the recovery ends and stays open for 4 ticks, so a perfectly timed press saves 9 ticks (0.15 seconds) and the last tick of the window saves 6.
+- What the saved ticks are worth depends on hit stun. For now every move stuns a hit defender for its active and recovery ticks plus 5. So after a hit:
+  - **chained normally**, the next attack lands 5 ticks sooner than its startup, which leaves the defender a gap of at least 3 ticks (the jab's 8 minus 5) to guard, parry or dodge;
+  - **gold linked**, it lands 14 ticks sooner: a follow-up with 14 ticks of startup or less is a combo the defender cannot escape, a slower one still leaves a gap. With the press on the window's last tick, the limit is 11 ticks of startup.
+- Whatever the timing, a hit leaves the attacker 5 ticks ahead: after a single attack they can act again before the defender can.
 - A gold link costs the same stamina as any other chained attack. Without enough stamina you return to neutral in the attack's end stance, also on that tick.
 
 The training dummy presses too early, so it never gold links.
@@ -239,7 +244,15 @@ The game starts here and needs no server. You face a dummy that always turns tow
 
 There are no rounds in training. To practise the parry, set the dummy to **attack** and press K just before its attack turns red.
 
-**P** pauses; while paused, **.** advances one tick at a time, which is the way to study an attack's timing with the overlay on.
+**P** pauses; while paused, **.** advances one tick at a time, which is the way to study an attack's timing with the overlay on. **T** cycles slow motion: the whole fight, animation included, runs at half or a quarter speed. Your inputs are read as usual, so timing a gold link is easier in slow motion than at full speed.
+
+The status line at the bottom reports how tight the latest follow-up in a string was, for either fighter, e.g. "Player: Jab → Cross: 9-tick gap" or "Player: Jab → Cross: combo, 0 ticks to spare (gold link)":
+
+- **N-tick gap** — after the previous attack's stun ended, the defender had N ticks in which a guard, parry or dodge would have taken effect before this attack landed. The string could have been escaped.
+- **combo** — the attack landed while the defender was still stunned, so nothing could have stopped it. The ticks to spare say how much later it could have come and still been a combo.
+- **gold link** — the attack was started with a gold link; **after a block** — the gap was measured against block stun rather than hit stun.
+
+Only follow-ups within one string count: once the attacker returns to neutral, the next hit starts a new string.
 
 ## Online duels
 

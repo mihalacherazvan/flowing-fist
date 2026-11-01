@@ -13,6 +13,10 @@ export class CameraRig {
     private camera: ArcRotateCamera;
     private rotationSpeed: number = 0.005;
     private lockOnFollowSpeed: number = 0.15;
+    /** Fastest the camera turns while locked on, in radians per second: locking on swings it round over about 0.75 s */
+    private lockOnMaxTurnSpeed: number = Math.PI;
+    /** Fastest the player slides across the view when locking on or off, in screen offset units per second */
+    private lockOnMaxOffsetSpeed: number = 2.5;
     /** How far the locked-on camera turns off the line from the player to the opponent */
     private lockOnSideAngle: number = Math.PI / 4;
     /** 1 when the locked-on camera is on the player's right, -1 on their left, null when not locked on */
@@ -53,8 +57,9 @@ export class CameraRig {
      * Follow the target and apply mouse rotation
      *
      * @param lockOnYaw facing of the locked-on player, or null when free
+     * @param elapsedSeconds real time since the previous frame
      */
-    public update(target: Vector3, lockOnYaw: number | null): void {
+    public update(target: Vector3, lockOnYaw: number | null, elapsedSeconds: number): void {
         this.camera.target.copyFrom(target);
 
         const deltaX = this.input.getMouseDeltaX();
@@ -70,12 +75,15 @@ export class CameraRig {
 
         // The player stands right of centre when free; locked on, on the side away from the opponent
         const targetOffsetX = this.lockOnSide === null ? 1 : -this.lockOnSide;
-        this.camera.targetScreenOffset.x += (targetOffsetX - this.camera.targetScreenOffset.x) * this.lockOnFollowSpeed;
+        const maxOffsetStep = this.lockOnMaxOffsetSpeed * elapsedSeconds;
+        this.camera.targetScreenOffset.x += clamp((targetOffsetX - this.camera.targetScreenOffset.x) * this.lockOnFollowSpeed, maxOffsetStep);
 
         if (lockOnYaw !== null && this.lockOnSide !== null) {
             // Swing behind and to one side of the player, so the player stands at the side of the view and the opponent is in the open
             const cameraYaw = lockOnYaw - this.lockOnSide * this.lockOnSideAngle;
-            this.camera.alpha = lerpAngle(this.camera.alpha, CameraRig.yawToAlpha(cameraYaw), this.lockOnFollowSpeed);
+            // Small corrections follow closely; the cap only slows the big swing when locking on
+            const turn = lerpAngle(this.camera.alpha, CameraRig.yawToAlpha(cameraYaw), this.lockOnFollowSpeed) - this.camera.alpha;
+            this.camera.alpha += clamp(turn, this.lockOnMaxTurnSpeed * elapsedSeconds);
         } else if (deltaX !== 0) {
             // Rotate camera around player (alpha rotation)
             this.camera.alpha -= deltaX * this.rotationSpeed;
@@ -106,4 +114,11 @@ export class CameraRig {
     private static yawToAlpha(yaw: number): number {
         return -yaw - Math.PI / 2;
     }
+}
+
+/**
+ * Limit a step to at most `limit` either way
+ */
+function clamp(step: number, limit: number): number {
+    return Math.max(-limit, Math.min(limit, step));
 }

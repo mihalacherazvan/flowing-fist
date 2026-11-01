@@ -270,6 +270,11 @@ export class DuelSession implements GameSession {
         return this.previousWorld;
     }
 
+    public getTimeScale(): number {
+        // The server sets the pace of an online fight
+        return 1;
+    }
+
     public getAlpha(): number {
         return this.phase === 'fighting' ? this.timestep.getAlpha() : 1;
     }

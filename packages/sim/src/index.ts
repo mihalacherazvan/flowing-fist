@@ -8,4 +8,6 @@ export { createMatchWorld, isFightOn } from './match';
 export { MatchPhase, NO_WINNER, QueuedAttack, StunKind, cloneMatch, cloneWorld, compileDeck, createCharacter, createWorld, hashWorld } from './state';
 export type { CharacterState, CompiledDeck, MatchState, WorldState } from './state';
 export { stepWorld } from './step';
+export { StringGapTracker } from './StringGapTracker';
+export type { StringGap } from './StringGapTracker';
 export * as tuning from './tuning';

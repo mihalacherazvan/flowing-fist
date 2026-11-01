@@ -263,8 +263,10 @@ export class GameScene {
 
         // Blend between the last two ticks so rendering stays smooth at any frame rate
         const alpha = this.session.getAlpha();
+        // Looping clips and blends slow down with the fight
+        const elapsedFightSeconds = elapsedMs * this.session.getTimeScale() / 1000;
         this.characterViews.forEach((view, index) => {
-            view.update(previousWorld.characters[index], world.characters[index], world.tick, alpha, elapsedMs / 1000);
+            view.update(previousWorld.characters[index], world.characters[index], world.tick, alpha, elapsedFightSeconds);
         });
         this.debugOverlay.update(world);
 
@@ -276,7 +278,7 @@ export class GameScene {
             this.cameraRig.placeBehind(world.characters[playerIndex].yaw);
         }
         const isLockedOn = world.characters[playerIndex].lockedOn;
-        this.cameraRig.update(playerView.getPosition(), isLockedOn ? playerView.getYaw() : null);
+        this.cameraRig.update(playerView.getPosition(), isLockedOn ? playerView.getYaw() : null, elapsedMs / 1000);
 
         this.publishHud(world);
     }

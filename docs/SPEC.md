@@ -2,7 +2,7 @@
 
 ## Status
 
-_As of 2026-10-07:_ milestones **M0–M5 are done**; **M6 is next**. Since M5 the first animations have gone in (attacks, guard, parry, reactions, lock-on steps), with half of the moves still on borrowed clips. This document is the plan. What actually exists is described in [ARCHITECTURE.md](ARCHITECTURE.md), how the game plays in [GAMEPLAY.md](GAMEPLAY.md), and how models and animations are made in [ASSETS.md](ASSETS.md).
+_As of 2026-11-01:_ milestones **M0–M5 are done**; **M6 is next**. Since M5 the first animations have gone in (attacks, guard, parry, reactions, lock-on steps), with half of the moves still on borrowed clips, along with the Absolver-style gold link (hit stun tuned so that only a gold link turns fast follow-ups into combos), more character models, a side-on lock-on camera, and training tools for timing: slow motion and a readout of the gap between the attacks of a string. This document is the plan. What actually exists is described in [ARCHITECTURE.md](ARCHITECTURE.md), how the game plays in [GAMEPLAY.md](GAMEPLAY.md), and how models and animations are made in [ASSETS.md](ASSETS.md).
 
 ## Context
 

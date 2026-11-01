@@ -26,6 +26,9 @@ export interface GameSession {
     /** The world one tick earlier, for render interpolation */
     getPreviousWorld(): WorldState;
 
+    /** How fast the fight runs compared to real time: 1, or less in slow motion */
+    getTimeScale(): number;
+
     /** How far rendering is between the previous and latest tick, 0 to 1 */
     getAlpha(): number;
 

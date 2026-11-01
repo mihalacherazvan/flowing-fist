@@ -87,7 +87,7 @@ export class CharacterView {
      *
      * @param tick  the world tick `current` belongs to
      * @param alpha 0 shows the previous tick, 1 the current one
-     * @param elapsedSeconds time since the previous frame was drawn
+     * @param elapsedSeconds fight time since the previous frame was drawn, which is less than real time in slow motion
      */
     public update(previous: CharacterState, current: CharacterState, tick: number, alpha: number, elapsedSeconds: number): void {
         this.rootNode.position.set(

@@ -82,6 +82,7 @@ Takes a world state and one input per character, and produces the next world sta
 | `match.ts` | Rounds: `createMatchWorld`, the countdown, the round clock, deciding a round and the match, resetting the fighters between rounds |
 | `math.ts` | Own `sin`, `cos`, `atan2` |
 | `tuning.ts` | Speeds, stamina, stun and timing constants |
+| `StringGapTracker.ts` | Diagnostics only: watches a fight tick by tick and measures, for each follow-up in a string, the ticks the defender had to act since the previous attack's stun ended. Training shows it in the status line; its test checks the gold link against those gaps |
 | `FixedTimestep.ts` | Turns variable frame time into whole ticks, with a leftover fraction for render interpolation |
 
 Rules that keep it deterministic, and must be preserved:
@@ -217,7 +218,7 @@ Babylon.js for rendering, React for the HUD, Vite for bundling.
 | File | Contents |
 |---|---|
 | `sessions/GameSession.ts` | The interface: update, current and previous world, interpolation fraction, local player, status line, and what to show before a fight (lobby) and after it (result) |
-| `sessions/TrainingSession.ts` | Local simulation against the training dummy, with pause and single-step. The player uses their active deck, the dummy the default one |
+| `sessions/TrainingSession.ts` | Local simulation against the training dummy, with pause, single-step, slow motion (the frame time fed to `FixedTimestep` is scaled, and `GameScene` scales the time given to the views so animation slows too) and the string gap readout. The player uses their active deck, the dummy the default one |
 | `sessions/DuelSession.ts` | Gets into a duel room as asked — through the matchmaking queue, by creating a private room, or by joining one by code — then feeds a `PredictionClient`, tracks the phase (connecting, searching, waiting, fighting, reconnecting, finished, ended), keeps the result, optional simulated latency (`?latency=80`) |
 | `training/TrainingDummy.ts` | Generates the dummy's input: stand, guard or attack |
 
@@ -230,7 +231,7 @@ Babylon.js for rendering, React for the HUD, Vite for bundling.
 | `characters/characterModelStore.ts` | The list of character models and the one chosen, kept in this browser's storage. Both characters are drawn with it; the choice is not part of the simulation and is not sent to the server |
 | `characters/characterAnimation.ts` | Which clip, at which frame, shows a character's state: the clip of each move and its strike frames, the reactions, guard, parry and locomotion. Plain data and functions, no Babylon |
 | `characters/SkeletonAnimator.ts` | Poses the skeleton from that choice: samples the clips, blends over 0.12 s when a clip changes, and can show one clip from the spine up over another on the legs |
-| `camera/CameraRig.ts` | Orbit camera driven by the locked pointer; starts each session behind the player; while locked on, swings behind them and 45° to the side the camera already leaned to, shifting the view so the player stands on the side away from the opponent. `GameScene` then sends the player's facing instead of the camera's yaw as the movement direction, so forward still means towards the opponent |
+| `camera/CameraRig.ts` | Orbit camera driven by the locked pointer; starts each session behind the player; while locked on, swings behind them and 45° to the side the camera already leaned to (its turn capped at 180°/s and the screen shift at 2.5 units/s, so the swing is gradual while small tracking corrections stay quick), shifting the view so the player stands on the side away from the opponent. `GameScene` then sends the player's facing instead of the camera's yaw as the movement direction, so forward still means towards the opponent |
 | `debug/CombatDebugOverlay.ts` | Body cylinders and hitbox spheres, coloured by state and attack phase; hidden until toggled |
 
 **Account and decks**

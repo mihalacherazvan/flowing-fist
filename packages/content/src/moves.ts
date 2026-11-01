@@ -31,6 +31,10 @@ export interface MoveDefinition {
     staminaCost: number;
     /** Stamina taken from a defender who blocks */
     guardDamage: number;
+    /**
+     * How long a defender who is hit cannot act. Measured against the attacker's own active and
+     * recovery ticks, it decides which follow-ups combo: see the rules in moves.test.ts.
+     */
     hitStunTicks: number;
     blockStunTicks: number;
     height: AttackHeight;
@@ -42,8 +46,10 @@ export interface MoveDefinition {
 }
 
 // All timings, damage and hitboxes below are placeholders until real attack
-// animations exist to author them against. Distances assume the character
-// model as drawn by the client, about 2.7 units tall.
+// animations exist to author them against. For now every hit stun is the move's
+// active and recovery ticks plus 5, and every gold link window opens 9 ticks
+// before recovery ends. Distances assume the character model as drawn by the
+// client, about 2.7 units tall.
 const MOVE_DEFINITIONS: MoveDefinition[] = [
     {
         id: 'jab',
@@ -58,7 +64,7 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         damage: 6,
         staminaCost: 8,
         guardDamage: 8,
-        hitStunTicks: 18,
+        hitStunTicks: 22,
         blockStunTicks: 10,
         height: 'high',
         guardBreak: false,
@@ -78,7 +84,7 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         damage: 11,
         staminaCost: 13,
         guardDamage: 14,
-        hitStunTicks: 24,
+        hitStunTicks: 29,
         blockStunTicks: 14,
         height: 'high',
         guardBreak: false,
@@ -98,7 +104,7 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         damage: 10,
         staminaCost: 16,
         guardDamage: 0,
-        hitStunTicks: 26,
+        hitStunTicks: 35,
         blockStunTicks: 0,
         height: 'mid',
         guardBreak: true,
@@ -118,7 +124,7 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         damage: 8,
         staminaCost: 10,
         guardDamage: 10,
-        hitStunTicks: 20,
+        hitStunTicks: 24,
         blockStunTicks: 12,
         height: 'high',
         guardBreak: false,
@@ -138,7 +144,7 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         damage: 9,
         staminaCost: 11,
         guardDamage: 10,
-        hitStunTicks: 20,
+        hitStunTicks: 27,
         blockStunTicks: 12,
         height: 'low',
         guardBreak: false,
@@ -158,7 +164,7 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         damage: 12,
         staminaCost: 14,
         guardDamage: 14,
-        hitStunTicks: 26,
+        hitStunTicks: 31,
         blockStunTicks: 14,
         height: 'mid',
         guardBreak: false,
@@ -178,7 +184,7 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         damage: 8,
         staminaCost: 10,
         guardDamage: 10,
-        hitStunTicks: 20,
+        hitStunTicks: 24,
         blockStunTicks: 12,
         height: 'high',
         guardBreak: false,
@@ -198,7 +204,7 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         damage: 14,
         staminaCost: 16,
         guardDamage: 18,
-        hitStunTicks: 28,
+        hitStunTicks: 34,
         blockStunTicks: 16,
         height: 'high',
         guardBreak: false,
@@ -221,7 +227,7 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         damage: 9,
         staminaCost: 12,
         guardDamage: 14,
-        hitStunTicks: 22,
+        hitStunTicks: 29,
         blockStunTicks: 14,
         height: 'mid',
         guardBreak: false,
@@ -241,7 +247,7 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         damage: 13,
         staminaCost: 15,
         guardDamage: 16,
-        hitStunTicks: 26,
+        hitStunTicks: 31,
         blockStunTicks: 15,
         height: 'mid',
         guardBreak: false,
@@ -261,7 +267,7 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         damage: 16,
         staminaCost: 18,
         guardDamage: 20,
-        hitStunTicks: 30,
+        hitStunTicks: 36,
         blockStunTicks: 18,
         height: 'high',
         guardBreak: false,
@@ -284,7 +290,7 @@ const MOVE_DEFINITIONS: MoveDefinition[] = [
         damage: 10,
         staminaCost: 13,
         guardDamage: 12,
-        hitStunTicks: 28,
+        hitStunTicks: 34,
         blockStunTicks: 14,
         height: 'low',
         guardBreak: false,
