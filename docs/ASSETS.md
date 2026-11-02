@@ -33,6 +33,8 @@ assets-src/                         Mixamo downloads; not in git
     character.fbx                   a second generated character, built the same way
   tang-tunic-cat-v2/
     character.fbx                   a third, built the same way
+  wing-chun-cat/
+    character.fbx                   a fourth, built the same way
 
 apps/client/public/models/          what the game loads; not in git
   y-bot/
@@ -43,6 +45,8 @@ apps/client/public/models/          what the game loads; not in git
     fighter-v2-with-animations.glb
   tang-tunic-cat-v2/
     tang-tunic-cat-v2-with-animations.glb
+  wing-chun-cat/
+    wing-chun-cat-with-animations.glb
 ```
 
 Neither folder is tracked in git: Mixamo's licence allows using the assets in a game but not handing them out as files, and the repository is no place for them. **Keep your own backup of `assets-src/`**, because it is the only source the models can be rebuilt from.

@@ -12,6 +12,7 @@ export const CHARACTER_MODELS: readonly CharacterModel[] = [
     { id: 'fighter', name: 'Masked fighter', path: 'models/fighter/fighter-with-animations.glb' },
     { id: 'fighter-v2', name: 'Masked fighter v2', path: 'models/fighter-v2/fighter-v2-with-animations.glb' },
     { id: 'tang-tunic-cat-v2', name: 'Tang tunic cat', path: 'models/tang-tunic-cat-v2/tang-tunic-cat-v2-with-animations.glb' },
+    { id: 'wing-chun-cat', name: 'Wing Chun cat', path: 'models/wing-chun-cat/wing-chun-cat-with-animations.glb' },
     { id: 'y-bot', name: 'Y Bot', path: 'models/y-bot/y-bot-with-animations.glb' }
 ];
 
